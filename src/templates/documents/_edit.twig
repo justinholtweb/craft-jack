@@ -1,0 +1,246 @@
+{% extends '_layouts/cp' %}
+{% import '_includes/forms' as forms %}
+
+{% set title = document.title %}
+{% set selectedSubnavItem = 'documents' %}
+{% set crumbs = [{ label: 'Documents'|t('jack'), url: url('jack/documents') }] %}
+{% set fullPageForm = true %}
+
+{% set missingFacts = document.getMissingFacts() %}
+{% set warnings = document.getWarnings() %}
+
+{% block actionButton %}
+    <div class="btngroup">
+        <button type="submit" class="btn submit">{{ 'Save'|t('app') }}</button>
+        <button type="button" class="btn menubtn" title="{{ 'Actions'|t('app') }}"></button>
+        <div class="menu">
+            <ul>
+                <li><a class="formsubmit" data-action="jack/documents/compile" data-param="documentId" data-value="{{ document.id }}">{{ 'Recompile'|t('jack') }}</a></li>
+                {% if canPublish %}
+                    <li><a class="formsubmit" data-action="jack/documents/publish" data-param="documentId" data-value="{{ document.id }}">{{ 'Publish this version'|t('jack') }}</a></li>
+                {% endif %}
+                {% if isPro %}
+                    <li><a href="{{ url('jack/documents/' ~ document.id ~ '/history', { siteId: document.siteId }) }}">{{ 'History'|t('jack') }} ({{ versionCount }})</a></li>
+                {% endif %}
+            </ul>
+            <hr>
+            <ul>
+                <li><a class="formsubmit error" data-action="jack/documents/delete" data-param="documentId" data-value="{{ document.id }}" data-confirm="{{ 'Delete this document?'|t('jack') }}">{{ 'Delete'|t('app') }}</a></li>
+            </ul>
+        </div>
+    </div>
+{% endblock %}
+
+{% block content %}
+    {{ actionInput('jack/documents/save') }}
+    {{ hiddenInput('documentId', document.id) }}
+    {{ hiddenInput('siteId', document.siteId) }}
+    {{ redirectInput('jack/documents/{id}') }}
+
+    {% if missingFacts|length %}
+        <div class="readable">
+            <blockquote class="note error">
+                <p><strong>{{ 'This document is incomplete.'|t('jack') }}</strong></p>
+                <p>{{ 'Clauses in it need facts the profile does not have. Until they are filled in, the document is published with gaps where those details belong.'|t('jack') }}</p>
+                <ul>
+                    {% for key in missingFacts %}
+                        <li>{{ facts[key].label ?? key }} <code class="light">{{ key }}</code></li>
+                    {% endfor %}
+                </ul>
+                <p><a class="go" href="{{ url('jack/profile') }}">{{ 'Fill these in'|t('jack') }}</a></p>
+            </blockquote>
+        </div>
+    {% endif %}
+
+    {% if isStale %}
+        <div class="readable">
+            <blockquote class="note warning">
+                <p><strong>{{ 'Out of date.'|t('jack') }}</strong> {{ 'What this document says and what it would say if compiled now have parted company.'|t('jack') }}</p>
+                {% if canOverride %}
+                    <ul>
+                        {% for key in drift.changed %}
+                            <li>{{ 'Changed'|t('jack') }}: <code>{{ key }}</code>{% if library.clause(key) %} — {{ library.clause(key).heading(document.languageForSite()) }}{% endif %}</li>
+                        {% endfor %}
+                        {% for key in drift.added %}
+                            <li>{{ 'New'|t('jack') }}: <code>{{ key }}</code>{% if library.clause(key) %} — {{ library.clause(key).heading(document.languageForSite()) }}{% endif %}</li>
+                        {% endfor %}
+                        {% for key in drift.removed %}
+                            <li>{{ 'No longer applies'|t('jack') }}: <code>{{ key }}</code></li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <p class="light">{{ 'Jack Pro shows exactly which paragraphs moved and lets you compare them side by side.'|t('jack') }}</p>
+                {% endif %}
+                <p><a class="formsubmit btn" data-action="jack/documents/compile" data-param="documentId" data-value="{{ document.id }}">{{ 'Recompile now'|t('jack') }}</a></p>
+            </blockquote>
+        </div>
+    {% endif %}
+
+    {% for warning in warnings %}
+        <div class="readable"><blockquote class="note"><p>{{ warning }}</p></blockquote></div>
+    {% endfor %}
+
+    <div id="fields">
+        {{ forms.textField({
+            label: 'Title'|t('app'),
+            id: 'title',
+            name: 'title',
+            value: document.title,
+            required: true,
+            errors: document.getErrors('title'),
+        }) }}
+
+        {{ forms.textField({
+            label: 'Slug'|t('app'),
+            id: 'slug',
+            name: 'slug',
+            value: document.slug,
+            errors: document.getErrors('slug'),
+        }) }}
+
+        <hr>
+
+        <h2>{{ 'The document'|t('jack') }}</h2>
+
+        {% for section in compiled.sections %}
+            {% set override = overrides[section.clauseKey] ?? {} %}
+            {% set clause = library.clause(section.clauseKey) %}
+
+            <div class="pane" style="margin-bottom: 14px;">
+                <div class="flex flex-nowrap" style="justify-content: space-between; align-items: baseline;">
+                    <h3 style="margin: 0;">{{ section.heading }}</h3>
+                    <div class="light smalltext">
+                        <code>{{ section.clauseKey }}</code>
+                        {% if section.citation %} · {{ section.citation }}{% endif %}
+                        {% if section.isOverridden() %} · <strong>{{ 'edited'|t('jack') }}</strong>{% endif %}
+                    </div>
+                </div>
+
+                {% if section.note %}
+                    <p class="light smalltext" style="margin-top: 6px;">{{ section.note }}</p>
+                {% endif %}
+
+                {% if section.missingFacts|length %}
+                    <p class="error smalltext">{{ 'Needs:'|t('jack') }}
+                        {% for key in section.missingFacts %}<code>{{ key }}</code>{{ not loop.last ? ', ' }}{% endfor %}
+                    </p>
+                {% endif %}
+
+                <div class="jack-preview readable" style="margin-top: 8px;">{{ section.html|raw }}</div>
+
+                {% if canOverride %}
+                    <div style="margin-top: 10px;">
+                        <button type="button" class="btn small jack-toggle" data-target="override-{{ loop.index }}">{{ 'Rewrite this section'|t('jack') }}</button>
+                        <div id="override-{{ loop.index }}" class="hidden" style="margin-top: 10px;">
+                            {{ forms.textField({
+                                label: 'Heading'|t('jack'),
+                                name: 'overrides[' ~ section.clauseKey ~ '][heading]',
+                                value: override.heading ?? '',
+                                placeholder: section.heading,
+                            }) }}
+                            {{ forms.textareaField({
+                                label: 'Text'|t('jack'),
+                                instructions: 'HTML. Leave empty to keep the library’s wording — and to keep receiving updates to it, which an edited section stops getting.'|t('jack'),
+                                name: 'overrides[' ~ section.clauseKey ~ '][body]',
+                                value: override.body ?? '',
+                                rows: 8,
+                                class: 'code',
+                            }) }}
+                            {{ forms.checkboxField({
+                                label: 'Leave this section out'|t('jack'),
+                                name: 'overrides[' ~ section.clauseKey ~ '][disabled]',
+                                checked: override.disabled ?? false,
+                            }) }}
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+        {% else %}
+            <div class="readable">
+                <p class="light">{{ 'Nothing to show yet — no clause in the library applies to this document with the facts Jack has.'|t('jack') }}</p>
+            </div>
+        {% endfor %}
+
+        {% if canOverride %}
+            <div class="pane">
+                <h3>{{ 'Add a section'|t('jack') }}</h3>
+                <p class="light smalltext">{{ 'For something the library has no clause for. It is yours to maintain — Jack will never update it.'|t('jack') }}</p>
+                {{ forms.textField({
+                    label: 'Heading'|t('jack'),
+                    name: 'overrides[custom:1][heading]',
+                    value: overrides['custom:1'].heading ?? '',
+                }) }}
+                {{ forms.textareaField({
+                    label: 'Text'|t('jack'),
+                    name: 'overrides[custom:1][body]',
+                    value: overrides['custom:1'].body ?? '',
+                    rows: 6,
+                    class: 'code',
+                }) }}
+            </div>
+        {% endif %}
+    </div>
+{% endblock %}
+
+{% block details %}
+    <div class="meta">
+        {{ forms.lightswitchField({
+            label: 'Enabled'|t('app'),
+            id: 'enabled',
+            name: 'enabled',
+            on: document.enabled,
+        }) }}
+
+        {{ forms.selectField({
+            label: 'Jurisdiction'|t('jack'),
+            instructions: 'Which country’s clauses this document is written for.'|t('jack'),
+            id: 'jurisdiction',
+            name: 'jurisdiction',
+            value: document.jurisdiction,
+            options: [
+                { label: 'Germany'|t('jack'), value: 'de' },
+                { label: 'Austria'|t('jack'), value: 'at' },
+                { label: 'Switzerland'|t('jack'), value: 'ch' },
+                { label: 'European Union'|t('jack'), value: 'eu' },
+                { label: 'United Kingdom'|t('jack'), value: 'uk' },
+                { label: 'United States'|t('jack'), value: 'us' },
+            ],
+        }) }}
+    </div>
+
+    <div class="meta read-only">
+        <div class="data">
+            <h5 class="heading">{{ 'Type'|t('jack') }}</h5>
+            <div class="value">{{ document.typeLabel() }}</div>
+        </div>
+        <div class="data">
+            <h5 class="heading">{{ 'Language'|t('jack') }}</h5>
+            <div class="value">{{ document.languageForSite() }}</div>
+        </div>
+        <div class="data">
+            <h5 class="heading">{{ 'Compiled'|t('jack') }}</h5>
+            <div class="value">{{ document.compiledAt ? document.compiledAt|datetime('short') : 'never'|t('jack') }}</div>
+        </div>
+        <div class="data">
+            <h5 class="heading">{{ 'Published'|t('jack') }}</h5>
+            <div class="value">{{ document.publishedAt ? document.publishedAt|datetime('short') : 'never'|t('jack') }}</div>
+        </div>
+        {% if document.url %}
+            <div class="data">
+                <h5 class="heading">{{ 'URL'|t('app') }}</h5>
+                <div class="value"><a href="{{ document.url }}" rel="noopener" target="_blank">{{ document.uri }}</a></div>
+            </div>
+        {% endif %}
+    </div>
+{% endblock %}
+
+{% js %}
+document.querySelectorAll('.jack-toggle').forEach(function(button) {
+    button.addEventListener('click', function() {
+        var target = document.getElementById(button.dataset.target);
+        if (target) {
+            target.classList.toggle('hidden');
+        }
+    });
+});
+{% endjs %}

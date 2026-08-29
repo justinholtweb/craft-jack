@@ -1,0 +1,89 @@
+{% import '_includes/forms' as forms %}
+
+<div class="readable">
+    <blockquote class="note">
+        <p>{{ 'Jack generates drafts from the facts you give it. It is not a lawyer, and a generated document is a starting point that somebody accountable should read before it is published.'|t('jack') }}</p>
+    </blockquote>
+</div>
+
+{{ forms.lightswitchField({
+    label: 'Recompile automatically'|t('jack'),
+    instructions: 'Rebuild every document whenever the profile or the inventory changes. Turn this off if legal text has to be reviewed before it goes live — documents will show as out of date instead.'|t('jack'),
+    id: 'autoCompile',
+    name: 'autoCompile',
+    on: settings.autoCompile,
+}) }}
+
+{{ forms.lightswitchField({
+    label: 'Give documents their own URLs'|t('jack'),
+    instructions: 'Off, documents have no front-end page and are rendered only where a template asks for them. Use this if the site already publishes its legal texts through its own entries — two copies is one too many, and one of them will go stale.'|t('jack'),
+    id: 'enableDocumentUrls',
+    name: 'enableDocumentUrls',
+    on: settings.enableDocumentUrls,
+}) }}
+
+{{ forms.autosuggestField({
+    label: 'Document template'|t('jack'),
+    instructions: 'Rendered with a `document` variable. Left empty, Jack renders a plain readable page of its own — which is a working answer, not a placeholder.'|t('jack'),
+    id: 'documentTemplate',
+    name: 'documentTemplate',
+    suggestions: craft.cp.getTemplateSuggestions(),
+    value: settings.documentTemplate,
+    errors: settings.getErrors('documentTemplate'),
+}) }}
+
+{{ forms.lightswitchField({
+    label: 'Show a “last updated” line'|t('jack'),
+    id: 'showLastUpdated',
+    name: 'showLastUpdated',
+    on: settings.showLastUpdated,
+}) }}
+
+{{ forms.lightswitchField({
+    label: 'Clean edited HTML'|t('jack'),
+    instructions: 'Run text you have rewritten through HTML Purifier. Library text is never touched.'|t('jack'),
+    id: 'purifyOutput',
+    name: 'purifyOutput',
+    on: settings.purifyOutput,
+}) }}
+
+<hr>
+
+<h2>{{ 'Finding undeclared services'|t('jack') }}</h2>
+
+{{ forms.editableTableField({
+    label: 'Directories to scan'|t('jack'),
+    instructions: 'Relative to the project root. Compiled JavaScript is worth including — a tag manager snippet often appears nowhere else.'|t('jack'),
+    id: 'detectorPaths',
+    name: 'detectorPaths',
+    cols: {
+        path: { type: 'singleline', heading: 'Path'|t('jack'), width: 400 },
+    },
+    rows: settings.detectorPaths|map(p => { path: p }),
+    addRowLabel: 'Add a directory'|t('jack'),
+    allowAdd: true,
+    allowDelete: true,
+    allowReorder: true,
+}) }}
+
+{{ forms.textField({
+    label: 'File extensions'|t('jack'),
+    instructions: 'Comma separated.'|t('jack'),
+    id: 'detectorExtensions',
+    name: 'detectorExtensions',
+    value: settings.detectorExtensions|join(', '),
+}) }}
+
+{{ forms.textField({
+    label: 'Largest file to read'|t('jack'),
+    instructions: 'In kilobytes.'|t('jack'),
+    id: 'detectorMaxFileSize',
+    name: 'detectorMaxFileSize',
+    type: 'number',
+    size: 6,
+    value: settings.detectorMaxFileSize,
+}) }}
+
+<div class="readable">
+    <p class="light">{{ 'Clause library reviewed {date}.'|t('jack', { date: craft.jack.libraryVersion() }) }}</p>
+</div>

@@ -1,0 +1,29 @@
+{% extends '_layouts/elementindex' %}
+
+{% set title = 'Legal documents'|t('jack') %}
+{% set selectedSubnavItem = 'documents' %}
+{% set elementType = 'justinholtweb\\jack\\elements\\Document' %}
+
+{% block actionButton %}
+    {% if canCreate %}
+        <a href="{{ url('jack/documents/new') }}" class="btn submit add icon">{{ 'New document'|t('jack') }}</a>
+    {% endif %}
+{% endblock %}
+
+{% block sidebar %}
+    {{ parent() }}
+
+    {% if missingTypes|length %}
+        <div class="pane" style="margin-top: 14px;">
+            <h5>{{ 'Not created yet'|t('jack') }}</h5>
+            <ul class="light">
+                {% for type in missingTypes %}
+                    <li>{{ typeLabels[type] ?? type }}</li>
+                {% endfor %}
+            </ul>
+            {% if not isPro %}
+                <p class="light smalltext">{{ 'Jack Lite creates an imprint and a privacy policy.'|t('jack') }}</p>
+            {% endif %}
+        </div>
+    {% endif %}
+{% endblock %}

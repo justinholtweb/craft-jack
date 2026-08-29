@@ -1,0 +1,53 @@
+{# The front-end page Jack serves when no template has been configured.
+
+   Plain on purpose. A legal text is read, printed and quoted, and a site that has not yet styled
+   its imprint should still be able to publish one today. #}
+<!DOCTYPE html>
+<html lang="{{ document.languageForSite() }}">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="robots" content="index, follow">
+    <title>{{ document.title }}</title>
+    <style>
+        :root { color-scheme: light dark; }
+        body {
+            margin: 0 auto;
+            padding: 3rem 1.25rem 6rem;
+            max-width: 44rem;
+            font: 16px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            color: #1f2933;
+            background: #fff;
+        }
+        h1 { font-size: 1.9rem; line-height: 1.2; margin: 0 0 2rem; }
+        h2 { font-size: 1.25rem; margin: 2.5rem 0 .5rem; }
+        h3 { font-size: 1.05rem; margin: 1.75rem 0 .4rem; }
+        h4 { font-size: .95rem; margin: 1.25rem 0 .3rem; }
+        p, li { margin: .6rem 0; }
+        a { color: #0b62c4; }
+        code { font-size: .9em; background: rgba(0,0,0,.05); padding: .1em .3em; border-radius: 3px; }
+        table { border-collapse: collapse; width: 100%; margin: 1rem 0; font-size: .92rem; }
+        th, td { text-align: left; padding: .4rem .6rem; border-bottom: 1px solid #e4e7eb; vertical-align: top; }
+        .jack-toc { margin: 0 0 2.5rem; padding: 1rem 1.25rem; background: #f5f7fa; border-radius: 6px; }
+        .jack-toc ol { margin: 0; padding-left: 1.2rem; }
+        .jack-toc li { margin: .2rem 0; }
+        .jack-updated { margin-top: 3rem; color: #616e7c; font-size: .9rem; }
+        @media (prefers-color-scheme: dark) {
+            body { color: #e4e7eb; background: #14171a; }
+            a { color: #7cb7f5; }
+            th, td { border-bottom-color: #2c3238; }
+            .jack-toc { background: #1c2126; }
+            .jack-updated { color: #9aa5b1; }
+            code { background: rgba(255,255,255,.08); }
+        }
+        @media print {
+            body { max-width: none; padding: 0; color: #000; }
+            .jack-toc { display: none; }
+        }
+    </style>
+</head>
+<body>
+    <h1>{{ document.title }}</h1>
+    {{ body }}
+</body>
+</html>

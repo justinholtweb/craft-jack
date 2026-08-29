@@ -1,0 +1,94 @@
+{% extends '_layouts/cp' %}
+{% import '_includes/forms' as forms %}
+
+{% set title = site ? 'Profile'|t('jack') ~ ' — ' ~ site.name : 'Profile'|t('jack') %}
+{% set selectedSubnavItem = 'profile' %}
+{% set fullPageForm = canEdit %}
+
+{% block actionButton %}
+    {% if canEdit %}
+        <button type="submit" class="btn submit">{{ 'Save'|t('app') }}</button>
+    {% endif %}
+{% endblock %}
+
+{% block content %}
+    {{ actionInput('jack/profile/save') }}
+    {{ redirectInput(site ? 'jack/profile/' ~ site.handle : 'jack/profile') }}
+    {% if site %}{{ hiddenInput('siteId', site.id) }}{% endif %}
+
+    <div class="readable">
+        {% if site %}
+            <p>{{ 'These answers apply to {site} only. Anything left blank falls back to the global profile — blanking a field here does not erase it, it stops overriding it.'|t('jack', { site: site.name }) }}</p>
+        {% else %}
+            <p>{{ 'Everything Jack knows about you. Each of these is a fact some clause needs; fill one in here and it is right in every document, in every language, at once.'|t('jack') }}</p>
+        {% endif %}
+
+        <div style="margin: 1rem 0 1.5rem;">
+            <div style="height: 6px; background: #e4e7eb; border-radius: 3px; overflow: hidden;">
+                <div style="height: 100%; width: {{ (completeness * 100)|round }}%; background: {{ completeness > 0.85 ? '#27ab83' : (completeness > 0.6 ? '#f0b429' : '#cf1124') }};"></div>
+            </div>
+            <p class="light smalltext" style="margin-top: 4px;">{{ '{percent}% of the facts the clause library asks for are filled in.'|t('jack', { percent: (completeness * 100)|round }) }}</p>
+        </div>
+    </div>
+
+    {% if multiSite %}
+        <div class="readable">
+            <p class="light smalltext">
+                {{ 'Per-site overrides:'|t('jack') }}
+                <a href="{{ url('jack/profile') }}">{{ 'Global'|t('jack') }}</a>
+                {% for s in sites %} · <a href="{{ url('jack/profile/' ~ s.handle) }}">{{ s.name }}</a>{% endfor %}
+            </p>
+        </div>
+    {% endif %}
+
+    {% for group, groupFacts in groups %}
+        <div class="pane" style="margin-bottom: 14px;">
+            <h2>{{ groupLabels[group] ?? group|title }}</h2>
+
+            {% for key, fact in groupFacts %}
+                {% set name = 'facts[' ~ key ~ ']' %}
+                {% set value = values[key] ?? '' %}
+                {% set placeholder = site ? (inherited[key]|default('') ?: (fact.placeholder ?? '')) : (fact.placeholder ?? '') %}
+
+                {% if fact.type == 'bool' %}
+                    {{ forms.lightswitchField({
+                        label: fact.label,
+                        instructions: fact.hint ?? null,
+                        name: name,
+                        on: value ? true : false,
+                        disabled: not canEdit,
+                    }) }}
+                {% elseif fact.type == 'select' %}
+                    {{ forms.selectField({
+                        label: fact.label,
+                        instructions: fact.hint ?? null,
+                        name: name,
+                        value: value ?: (fact.default ?? ''),
+                        options: fact.options,
+                        disabled: not canEdit,
+                    }) }}
+                {% elseif fact.type == 'textarea' %}
+                    {{ forms.textareaField({
+                        label: fact.label,
+                        instructions: fact.hint ?? null,
+                        name: name,
+                        value: value,
+                        placeholder: placeholder,
+                        rows: 3,
+                        disabled: not canEdit,
+                    }) }}
+                {% else %}
+                    {{ forms.textField({
+                        label: fact.label,
+                        instructions: fact.hint ?? null,
+                        name: name,
+                        value: value,
+                        placeholder: placeholder,
+                        type: fact.type == 'email' ? 'email' : (fact.type == 'url' ? 'url' : (fact.type == 'tel' ? 'tel' : 'text')),
+                        disabled: not canEdit,
+                    }) }}
+                {% endif %}
+            {% endfor %}
+        </div>
+    {% endfor %}
+{% endblock %}

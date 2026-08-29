@@ -1,0 +1,141 @@
+{% extends '_layouts/cp' %}
+{% import '_includes/forms' as forms %}
+
+{% set title = 'Inventory'|t('jack') %}
+{% set selectedSubnavItem = 'inventory' %}
+
+{% block actionButton %}
+    {% if canDetect %}
+        <a href="{{ url('jack/inventory/detect') }}" class="btn">{{ 'Find undeclared services'|t('jack') }}</a>
+    {% endif %}
+{% endblock %}
+
+{% block content %}
+    <div class="readable">
+        <p>{{ 'Everyone this site hands data to. This list is the privacy policy — add Stripe here and the Stripe paragraph appears in every language you publish in, with the right legal basis and the right transfer wording.'|t('jack') }}</p>
+    </div>
+
+    {% set grouped = {} %}
+    {% for entry in entries %}
+        {% set grouped = grouped|merge({ (entry.category()): (grouped[entry.category()] ?? [])|merge([entry]) }) %}
+    {% endfor %}
+
+    {% for category, label in categories %}
+        {% if grouped[category] is defined %}
+            <div class="pane" style="margin-bottom: 14px;">
+                <h2>{{ label }}</h2>
+                <table class="data fullwidth">
+                    <tbody>
+                        {% for entry in grouped[category] %}
+                            <tr>
+                                <td>
+                                    <strong>{{ entry.label() }}</strong>
+                                    {% if entry.custom %}<span class="light smalltext">— {{ 'custom'|t('jack') }}</span>{% endif %}
+                                    {% if entry.isAlwaysOn() %}<span class="light smalltext">— {{ 'always on'|t('jack') }}</span>{% endif %}
+                                    {% if entry.get('provider') %}<div class="light smalltext">{{ entry.get('provider') }}</div>{% endif %}
+                                </td>
+                                <td class="thin light smalltext">
+                                    {% if entry.legalBasis() == 'consent' %}{{ 'Consent'|t('jack') }}
+                                    {% elseif entry.legalBasis() == 'contract' %}{{ 'Contract'|t('jack') }}
+                                    {% elseif entry.legalBasis() == 'obligation' %}{{ 'Legal obligation'|t('jack') }}
+                                    {% else %}{{ 'Legitimate interest'|t('jack') }}{% endif %}
+                                </td>
+                                <td class="thin light smalltext">
+                                    {% if entry.transfer() != 'none' %}{{ entry.transfer()|upper }}{% else %}EEA{% endif %}
+                                </td>
+                                <td class="thin">
+                                    <a class="btn small" href="{{ url('jack/inventory/' ~ entry.serviceKey) }}">{{ 'Edit'|t('app') }}</a>
+                                    {% if canManage and not entry.isAlwaysOn() %}
+                                        <button type="button"
+                                                class="btn small jack-remove"
+                                                data-key="{{ entry.serviceKey }}"
+                                                data-label="{{ entry.label() }}">{{ 'Remove'|t('app') }}</button>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% endif %}
+    {% endfor %}
+
+    {% if canManage %}
+        <div class="pane">
+            <h2>{{ 'Add a service'|t('jack') }}</h2>
+            <form method="post" accept-charset="UTF-8">
+                {{ csrfInput() }}
+                {{ actionInput('jack/inventory/add') }}
+
+                {% set options = [{ label: '—', value: '' }] %}
+                {% for category, services in available %}
+                    {% for key, label in services %}
+                        {% set options = options|merge([{ label: (categories[category] ?? category) ~ ' — ' ~ label, value: key }]) %}
+                    {% endfor %}
+                {% endfor %}
+
+                {{ forms.selectField({
+                    label: 'From the library'|t('jack'),
+                    instructions: 'Provider, address, legal basis and transfer wording all come with it.'|t('jack'),
+                    name: 'serviceKey',
+                    options: options,
+                }) }}
+
+                <div class="buttons">
+                    <button type="submit" class="btn submit">{{ 'Add'|t('jack') }}</button>
+                </div>
+            </form>
+
+            <hr>
+
+            <form method="post" accept-charset="UTF-8">
+                {{ csrfInput() }}
+                {{ actionInput('jack/inventory/add') }}
+                {{ forms.textField({
+                    label: 'Something else'|t('jack'),
+                    instructions: 'A key for a service the library has never heard of — lowercase letters, numbers and underscores. You describe it on the next screen.'|t('jack'),
+                    name: 'serviceKey',
+                    placeholder: 'our_crm',
+                }) }}
+                <div class="buttons">
+                    <button type="submit" class="btn">{{ 'Add a custom service'|t('jack') }}</button>
+                </div>
+            </form>
+        </div>
+    {% endif %}
+
+    {% if disabled|length %}
+        <div class="pane" style="margin-top: 14px;">
+            <h2>{{ 'Switched off'|t('jack') }}</h2>
+            <p class="light smalltext">{{ 'Kept, but left out of every document.'|t('jack') }}</p>
+            <ul>
+                {% for entry in disabled %}
+                    <li><a href="{{ url('jack/inventory/' ~ entry.serviceKey) }}">{{ entry.label() }}</a></li>
+                {% endfor %}
+            </ul>
+        </div>
+    {% endif %}
+{% endblock %}
+
+{% js %}
+// Posted with sendActionRequest rather than a formsubmit link: this screen already carries two
+// forms of its own, and a third wrapped around the table would nest them.
+document.querySelectorAll('.jack-remove').forEach(function(button) {
+    button.addEventListener('click', function() {
+        if (!confirm(Craft.t('jack', 'Remove {service} from the inventory?', { service: button.dataset.label }))) {
+            return;
+        }
+
+        button.classList.add('disabled');
+
+        Craft.sendActionRequest('POST', 'jack/inventory/remove', {
+            data: { serviceKey: button.dataset.key },
+        }).then(function() {
+            window.location.reload();
+        }).catch(function(error) {
+            button.classList.remove('disabled');
+            Craft.cp.displayError(error?.response?.data?.message || Craft.t('jack', 'Couldn’t remove that entry.'));
+        });
+    });
+});
+{% endjs %}

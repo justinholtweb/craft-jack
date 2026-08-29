@@ -1,0 +1,47 @@
+{% extends '_layouts/cp' %}
+
+{% set title = 'History'|t('jack') ~ ' — ' ~ document.title %}
+{% set selectedSubnavItem = 'documents' %}
+{% set crumbs = [
+    { label: 'Documents'|t('jack'), url: url('jack/documents') },
+    { label: document.title, url: document.getCpEditUrl() },
+] %}
+
+{% block content %}
+    <div class="readable">
+        <p>{{ 'Every published version of this document, kept forever. The question these answer is “what did our privacy policy say on the day this customer signed up”, and nothing about the current state answers it.'|t('jack') }}</p>
+    </div>
+
+    {% if versions|length %}
+        <table class="data fullwidth">
+            <thead>
+                <tr>
+                    <th>{{ 'Published'|t('jack') }}</th>
+                    <th>{{ 'Note'|t('jack') }}</th>
+                    <th>{{ 'Library'|t('jack') }}</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for version in versions %}
+                    <tr>
+                        <td>{{ version.dateCreated|datetime('short') }}</td>
+                        <td>{{ version.note ?: '—' }}</td>
+                        <td class="light">{{ version.libraryVersion ?: '—' }}</td>
+                        <td class="thin">
+                            <a class="btn small" href="{{ url('jack/documents/' ~ document.id ~ '/compare', {
+                                siteId: document.siteId,
+                                from: version.id,
+                                to: versions[0].id,
+                            }) }}">{{ 'Compare with latest'|t('jack') }}</a>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <div class="readable">
+            <p class="light">{{ 'Nothing published yet. Publishing freezes what the document currently says into a version somebody can be pointed at later.'|t('jack') }}</p>
+        </div>
+    {% endif %}
+{% endblock %}

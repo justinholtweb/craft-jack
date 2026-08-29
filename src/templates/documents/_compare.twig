@@ -1,0 +1,42 @@
+{% extends '_layouts/cp' %}
+
+{% set title = 'Compare'|t('jack') ~ ' — ' ~ document.title %}
+{% set selectedSubnavItem = 'documents' %}
+{% set crumbs = [
+    { label: 'Documents'|t('jack'), url: url('jack/documents') },
+    { label: document.title, url: document.getCpEditUrl() },
+    { label: 'History'|t('jack'), url: url('jack/documents/' ~ document.id ~ '/history') },
+] %}
+
+{% block content %}
+    <div class="readable">
+        <p class="light">
+            {{ 'Comparing'|t('jack') }}
+            <strong>{{ from ? from.dateCreated|datetime('short') : 'nothing'|t('jack') }}</strong>
+            →
+            <strong>{{ to ? to.dateCreated|datetime('short') : 'the current text'|t('jack') }}</strong>
+        </p>
+    </div>
+
+    <div class="pane jack-diff">
+        {% for row in rows %}
+            {% if row.type == 'added' %}
+                <p class="jack-diff-added"><span class="jack-diff-marker">+</span> {{ row.text }}</p>
+            {% elseif row.type == 'removed' %}
+                <p class="jack-diff-removed"><span class="jack-diff-marker">−</span> {{ row.text }}</p>
+            {% else %}
+                <p class="jack-diff-same"><span class="jack-diff-marker"> </span> {{ row.text }}</p>
+            {% endif %}
+        {% else %}
+            <p class="light">{{ 'No differences.'|t('jack') }}</p>
+        {% endfor %}
+    </div>
+{% endblock %}
+
+{% css %}
+.jack-diff p { margin: 0; padding: 2px 6px; font-size: 13px; line-height: 1.5; }
+.jack-diff-marker { display: inline-block; width: 1em; color: #8c95a3; font-family: monospace; }
+.jack-diff-added { background: #e8f6ec; }
+.jack-diff-removed { background: #fbeaea; text-decoration: line-through; text-decoration-color: rgba(0,0,0,.25); }
+.jack-diff-same { color: #596673; }
+{% endcss %}

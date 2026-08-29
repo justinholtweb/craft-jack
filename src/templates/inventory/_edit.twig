@@ -1,0 +1,172 @@
+{% extends '_layouts/cp' %}
+{% import '_includes/forms' as forms %}
+
+{% set title = entry.label() %}
+{% set selectedSubnavItem = 'inventory' %}
+{% set crumbs = [{ label: 'Inventory'|t('jack'), url: url('jack/inventory') }] %}
+{% set fullPageForm = canManage %}
+
+{% block actionButton %}
+    {% if canManage %}
+        <button type="submit" class="btn submit">{{ 'Save'|t('app') }}</button>
+    {% endif %}
+{% endblock %}
+
+{% block content %}
+    {{ actionInput('jack/inventory/save') }}
+    {{ hiddenInput('serviceKey', entry.serviceKey) }}
+
+    <div class="readable">
+        {% if entry.isKnown() %}
+            <p>{{ 'The facts below come from Jack’s library and are kept current by plugin updates. Change one and this site stops following the library for that field — so change what your lawyer told you to change, and leave the rest.'|t('jack') }}</p>
+        {% else %}
+            <p>{{ 'Jack has never heard of this service, so everything it says about it has to come from you. Anything left blank simply will not appear.'|t('jack') }}</p>
+        {% endif %}
+    </div>
+
+    {{ forms.textField({
+        label: 'Name'|t('jack'),
+        name: 'label',
+        value: entry.overrides.label ?? '',
+        placeholder: entry.definition.label ?? entry.serviceKey,
+        disabled: not canManage,
+    }) }}
+
+    {{ forms.textField({
+        label: 'Provider'|t('jack'),
+        name: 'provider',
+        value: entry.overrides.provider ?? '',
+        placeholder: entry.definition.provider ?? '',
+        disabled: not canManage,
+    }) }}
+
+    {{ forms.textField({
+        label: 'Provider address'|t('jack'),
+        name: 'providerAddress',
+        value: entry.overrides.providerAddress ?? '',
+        placeholder: entry.definition.providerAddress ?? '',
+        disabled: not canManage,
+    }) }}
+
+    {{ forms.selectField({
+        label: 'Legal basis'|t('jack'),
+        instructions: 'Jack’s reading, not a ruling. If your advisers take a different view, this is where it goes.'|t('jack'),
+        name: 'legalBasis',
+        value: entry.legalBasis(),
+        options: bases,
+        disabled: not canManage,
+    }) }}
+
+    {{ forms.selectField({
+        label: 'Where the data goes'|t('jack'),
+        name: 'transfer',
+        value: entry.transfer(),
+        options: transfers,
+        disabled: not canManage,
+    }) }}
+
+    <hr>
+
+    <h2>{{ 'What it says in the document'|t('jack') }}</h2>
+    <div class="readable">
+        <p class="light smalltext">{{ 'Short phrases, not sentences — Jack supplies the grammar around them so that forty services do not read like forty different lawyers.'|t('jack') }}</p>
+    </div>
+
+    {% for language, languageLabel in { de: 'German'|t('jack'), en: 'English'|t('jack') } %}
+        <div class="pane" style="margin-bottom: 14px;">
+            <h3>{{ languageLabel }}</h3>
+
+            {{ forms.textField({
+                label: 'Purpose'|t('jack'),
+                instructions: language == 'de' ? '„Diese Website nutzt X für …“' : '“This website uses X for …”',
+                name: 'purpose[' ~ language ~ ']',
+                value: entry.overrides.purpose[language] ?? '',
+                placeholder: entry.definition.purpose[language] ?? '',
+                disabled: not canManage,
+            }) }}
+
+            {{ forms.textField({
+                label: 'Data processed'|t('jack'),
+                name: 'data[' ~ language ~ ']',
+                value: entry.overrides.data[language] ?? '',
+                placeholder: entry.definition.data[language] ?? '',
+                disabled: not canManage,
+            }) }}
+
+            {{ forms.textField({
+                label: 'Retention'|t('jack'),
+                name: 'retention[' ~ language ~ ']',
+                value: entry.overrides.retention[language] ?? '',
+                placeholder: entry.definition.retention[language] ?? '',
+                disabled: not canManage,
+            }) }}
+
+            {{ forms.textareaField({
+                label: 'Extra note'|t('jack'),
+                name: 'notes[' ~ language ~ ']',
+                value: entry.overrides.notes[language] ?? '',
+                placeholder: entry.definition.notes[language] ?? '',
+                rows: 2,
+                disabled: not canManage,
+            }) }}
+        </div>
+    {% endfor %}
+
+    {{ forms.textField({
+        label: 'Privacy policy URL'|t('jack'),
+        name: 'privacyUrl',
+        value: entry.overrides.privacyUrl ?? '',
+        placeholder: entry.definition.privacyUrl ?? '',
+        type: 'url',
+        disabled: not canManage,
+    }) }}
+
+    {{ forms.textField({
+        label: 'Opt-out URL'|t('jack'),
+        name: 'optOutUrl',
+        value: entry.overrides.optOutUrl ?? '',
+        placeholder: entry.definition.optOutUrl ?? '',
+        type: 'url',
+        disabled: not canManage,
+    }) }}
+
+    {% if entry.cookies()|length %}
+        <div class="pane">
+            <h3>{{ 'Cookies'|t('jack') }}</h3>
+            <table class="data fullwidth">
+                <tbody>
+                    {% for cookie in entry.cookiesFor('en') %}
+                        <tr><td><code>{{ cookie.name }}</code></td><td class="light">{{ cookie.duration }}</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% endif %}
+{% endblock %}
+
+{% block details %}
+    <div class="meta">
+        {{ forms.lightswitchField({
+            label: 'In use'|t('jack'),
+            instructions: entry.isAlwaysOn() ? 'This one cannot be switched off — it describes something the site does whether or not it is written down.'|t('jack') : null,
+            name: 'enabled',
+            on: entry.enabled,
+            disabled: entry.isAlwaysOn() or not canManage,
+        }) }}
+    </div>
+
+    <div class="meta read-only">
+        <div class="data">
+            <h5 class="heading">{{ 'Key'|t('jack') }}</h5>
+            <div class="value"><code>{{ entry.serviceKey }}</code></div>
+        </div>
+        <div class="data">
+            <h5 class="heading">{{ 'Category'|t('jack') }}</h5>
+            <div class="value">{{ entry.category() }}</div>
+        </div>
+        <div class="data">
+            <h5 class="heading">{{ 'Source'|t('jack') }}</h5>
+            <div class="value">{{ entry.isKnown() ? 'Jack’s library'|t('jack') : 'Yours'|t('jack') }}</div>
+        </div>
+    </div>
+{% endblock %}
