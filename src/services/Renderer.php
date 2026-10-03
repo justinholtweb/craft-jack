@@ -4,17 +4,18 @@ namespace justinholtweb\jack\services;
 
 use Craft;
 use craft\base\Component;
+use craft\base\Element;
 use craft\helpers\Html;
 use craft\helpers\Template;
-use DateTime;
 use justinholtweb\jack\elements\Document;
 use justinholtweb\jack\Plugin;
 use Twig\Markup;
 
 /**
- * Puts a compiled document on a page.
+ * Puts a published document on a page.
  *
- * Renders the *stored* text and never recompiles on the way out. Front-end rendering that reached
+ * Renders the *published* text and never recompiles on the way out. Not the compiled text either:
+ * that moves on every profile and inventory save, and publishing is the step somebody signs off. Front-end rendering that reached
  * for the profile would make a half-typed address appear on a live privacy policy the instant it
  * was saved, and would put a compile — dozens of clause evaluations — on every page view of a
  * document that changes four times a year.
@@ -36,13 +37,13 @@ class Renderer extends Component
             'headingLevel' => 2,
         ];
 
-        $html = (string)$document->compiledHtml;
+        $html = $this->publishedHtml($document);
 
-        if (trim($html) === '') {
-            // Never an exception and never a blank page: a legal document that does not render is
-            // a page somebody has to be told about.
+        if ($html === '') {
+            // Never an exception: a legal document that does not render is a page somebody has to
+            // be told about, and the audit tells them.
             Craft::warning(
-                sprintf('Document “%s” has no compiled text for site %s.', $document->handle, $document->siteId),
+                sprintf('Document “%s” has no published text for site %s, or is disabled.', $document->handle, $document->siteId),
                 Plugin::LOG_CATEGORY,
             );
 
@@ -83,7 +84,7 @@ class Renderer extends Component
     {
         if (!preg_match_all(
             '~<section id="(?P<anchor>[^"]+)"[^>]*>\s*<h2[^>]*>(?P<title>.*?)</h2>~s',
-            (string)$document->compiledHtml,
+            $this->publishedHtml($document),
             $matches,
             PREG_SET_ORDER,
         )) {
@@ -94,6 +95,22 @@ class Renderer extends Component
             'anchor' => $match['anchor'],
             'title' => trim(html_entity_decode(strip_tags($match['title']), ENT_QUOTES, 'UTF-8')),
         ], $matches);
+    }
+
+    /**
+     * The text visitors may see: the last published copy, and none at all for a disabled document.
+     * A document an editor switched off because it was wrong must not stay in every footer that
+     * renders it by handle.
+     */
+    private function publishedHtml(Document $document): string
+    {
+        if ($document->getStatus() !== Element::STATUS_ENABLED) {
+            return '';
+        }
+
+        $html = (string)$document->publishedHtml;
+
+        return trim($html) === '' ? '' : $html;
     }
 
     private function tocHtml(Document $document): string
@@ -117,18 +134,18 @@ class Renderer extends Component
 
     private function lastUpdatedHtml(Document $document): string
     {
-        $date = $document->publishedAt ?: $document->compiledAt;
+        $date = $document->publishedAt;
 
         if (!$date) {
             return '';
         }
 
-        $formatted = Craft::$app->getFormatter()->asDate(new DateTime($date), 'long');
-        $german = str_starts_with($document->languageForSite(), 'de');
+        $formatted = Craft::$app->getFormatter()->asDate($date, 'long');
+        $line = Plugin::getInstance()->library->template('document', 'lastUpdated', $document->languageForSite());
 
         return Html::tag(
             'p',
-            Html::encode(($german ? 'Stand: ' : 'Last updated: ') . $formatted),
+            Html::encode(str_replace('{{ date }}', $formatted, $line)),
             ['class' => 'jack-updated'],
         );
     }

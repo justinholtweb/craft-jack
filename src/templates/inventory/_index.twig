@@ -22,18 +22,28 @@
 
     {% for category, label in categories %}
         {% if grouped[category] is defined %}
-            <div class="pane" style="margin-bottom: 14px;">
-                <h2>{{ label }}</h2>
-                <table class="data fullwidth">
+            <div class="pane jack-group">
+                <h2 id="jack-category-{{ category }}">{{ label }}</h2>
+                <table class="data fullwidth" aria-labelledby="jack-category-{{ category }}">
+                    <thead>
+                        <tr>
+                            <th scope="col">{{ 'Service'|t('jack') }}</th>
+                            <th scope="col" class="thin">{{ 'Legal basis'|t('jack') }}</th>
+                            <th scope="col" class="thin">{{ 'Transfer'|t('jack') }}</th>
+                            {% if canManage %}
+                                <th scope="col" class="thin"><span class="visually-hidden">{{ 'Actions'|t('app') }}</span></th>
+                            {% endif %}
+                        </tr>
+                    </thead>
                     <tbody>
                         {% for entry in grouped[category] %}
-                            <tr>
-                                <td>
-                                    <strong>{{ entry.label() }}</strong>
-                                    {% if entry.custom %}<span class="light smalltext">— {{ 'custom'|t('jack') }}</span>{% endif %}
-                                    {% if entry.isAlwaysOn() %}<span class="light smalltext">— {{ 'always on'|t('jack') }}</span>{% endif %}
+                            <tr id="jack-service-{{ entry.serviceKey }}">
+                                <th scope="row">
+                                    <a class="jack-service-link" href="{{ url('jack/inventory/' ~ entry.serviceKey) }}">{{ entry.label() }}</a>
+                                    {% if entry.custom %}<span class="light smalltext">({{ 'custom'|t('jack') }})</span>{% endif %}
+                                    {% if entry.isAlwaysOn() %}<span class="light smalltext">({{ 'always on'|t('jack') }})</span>{% endif %}
                                     {% if entry.get('provider') %}<div class="light smalltext">{{ entry.get('provider') }}</div>{% endif %}
-                                </td>
+                                </th>
                                 <td class="thin light smalltext">
                                     {% if entry.legalBasis() == 'consent' %}{{ 'Consent'|t('jack') }}
                                     {% elseif entry.legalBasis() == 'contract' %}{{ 'Contract'|t('jack') }}
@@ -43,15 +53,26 @@
                                 <td class="thin light smalltext">
                                     {% if entry.transfer() != 'none' %}{{ entry.transfer()|upper }}{% else %}EEA{% endif %}
                                 </td>
-                                <td class="thin">
-                                    <a class="btn small" href="{{ url('jack/inventory/' ~ entry.serviceKey) }}">{{ 'Edit'|t('app') }}</a>
-                                    {% if canManage and not entry.isAlwaysOn() %}
-                                        <button type="button"
-                                                class="btn small jack-remove"
-                                                data-key="{{ entry.serviceKey }}"
-                                                data-label="{{ entry.label() }}">{{ 'Remove'|t('app') }}</button>
-                                    {% endif %}
-                                </td>
+                                {% if canManage %}
+                                    <td class="thin">
+                                        {% if not entry.isAlwaysOn() %}
+                                            {{ disclosureMenu([
+                                                { label: 'Edit'|t('app'), url: url('jack/inventory/' ~ entry.serviceKey) },
+                                                {
+                                                    label: 'Remove'|t('app'),
+                                                    destructive: true,
+                                                    attributes: {
+                                                        class: ['jack-remove'],
+                                                        data: { key: entry.serviceKey, label: entry.label() },
+                                                    },
+                                                },
+                                            ], {
+                                                hiddenLabel: 'Actions for {service}'|t('jack', { service: entry.label() }),
+                                                buttonAttributes: { class: ['action-btn'] },
+                                            }) }}
+                                        {% endif %}
+                                    </td>
+                                {% endif %}
                             </tr>
                         {% endfor %}
                     </tbody>
@@ -61,7 +82,7 @@
     {% endfor %}
 
     {% if canManage %}
-        <div class="pane">
+        <div class="pane jack-group">
             <h2>{{ 'Add a service'|t('jack') }}</h2>
             <form method="post" accept-charset="UTF-8">
                 {{ csrfInput() }}
@@ -105,7 +126,7 @@
     {% endif %}
 
     {% if disabled|length %}
-        <div class="pane" style="margin-top: 14px;">
+        <div class="pane jack-group">
             <h2>{{ 'Switched off'|t('jack') }}</h2>
             <p class="light smalltext">{{ 'Kept, but left out of every document.'|t('jack') }}</p>
             <ul>
@@ -117,25 +138,48 @@
     {% endif %}
 {% endblock %}
 
+{% do view.registerTranslations('jack', [
+    'Remove {service} from the inventory?',
+    'Couldn’t remove that entry.',
+    'Service removed.',
+]) %}
+
+{% css %}
+.jack-group { margin-block-end: var(--m); }
+.jack-service-link { font-weight: 600; }
+{% endcss %}
+
 {% js %}
 // Posted with sendActionRequest rather than a formsubmit link: this screen already carries two
 // forms of its own, and a third wrapped around the table would nest them.
-document.querySelectorAll('.jack-remove').forEach(function(button) {
-    button.addEventListener('click', function() {
-        if (!confirm(Craft.t('jack', 'Remove {service} from the inventory?', { service: button.dataset.label }))) {
-            return;
+document.addEventListener('click', function(event) {
+    var button = event.target.closest('.jack-remove');
+    if (!button || button.disabled) {
+        return;
+    }
+
+    if (!confirm(Craft.t('jack', 'Remove {service} from the inventory?', { service: button.dataset.label }))) {
+        return;
+    }
+
+    button.disabled = true;
+
+    Craft.sendActionRequest('POST', 'jack/inventory/remove', {
+        data: { serviceKey: button.dataset.key },
+    }).then(function(response) {
+        Craft.cp.displaySuccess(response?.data?.message || Craft.t('jack', 'Service removed.'));
+        var row = document.getElementById('jack-service-' + button.dataset.key);
+        var tbody = row ? row.parentNode : null;
+        if (row) {
+            row.remove();
         }
-
-        button.classList.add('disabled');
-
-        Craft.sendActionRequest('POST', 'jack/inventory/remove', {
-            data: { serviceKey: button.dataset.key },
-        }).then(function() {
+        // An emptied category would leave a heading over nothing, so let the server redraw it.
+        if (tbody && !tbody.children.length) {
             window.location.reload();
-        }).catch(function(error) {
-            button.classList.remove('disabled');
-            Craft.cp.displayError(error?.response?.data?.message || Craft.t('jack', 'Couldn’t remove that entry.'));
-        });
+        }
+    }).catch(function(error) {
+        button.disabled = false;
+        Craft.cp.displayError(error?.response?.data?.message || Craft.t('jack', 'Couldn’t remove that entry.'));
     });
 });
 {% endjs %}

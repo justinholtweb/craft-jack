@@ -14,8 +14,8 @@
     {{ parent() }}
 
     {% if missingTypes|length %}
-        <div class="pane" style="margin-top: 14px;">
-            <h5>{{ 'Not created yet'|t('jack') }}</h5>
+        <div class="jack-missing">
+            <h2 class="h6">{{ 'Not created yet'|t('jack') }}</h2>
             <ul class="light">
                 {% for type in missingTypes %}
                     <li>{{ typeLabels[type] ?? type }}</li>
@@ -27,3 +27,7 @@
         </div>
     {% endif %}
 {% endblock %}
+
+{% css %}
+.jack-missing { margin-block-start: var(--m); padding-inline: var(--s); }
+{% endcss %}

@@ -1,6 +1,6 @@
 # Release Notes for Jack
 
-## 5.0.0
+## 5.0.0 - 2026-10-03
 
 Initial release.
 
@@ -8,10 +8,10 @@ Initial release.
 
 - **The profile** — sixty facts about a business, entered once, feeding every document in every
   language. One global set, with per-site overrides on multi-site installs.
-- **The inventory** — the third parties a site hands data to, with forty-four services described in
+- **The inventory** — the third parties a site hands data to, with forty-one third-party services described in
   full: provider, address, purpose, data categories, legal basis, retention, transfer mechanism and
   cookies. The privacy policy's service sections are rendered from it rather than written.
-- **The clause library** — forty-six clauses across eight document types, in German and English,
+- **The clause library** — fifty-nine clauses across eight document types, in German and English,
   shipped inside the plugin and stamped with the date they were last reviewed.
 - **Documents** as elements: localized, with URLs of their own and a plain readable page when no
   template has been configured.
@@ -21,8 +21,10 @@ Initial release.
 - **The detector** (Pro) — reads templates, installed plugins and environment variables and reports
   services that are on the site but not in the privacy policy, with the file and line as evidence.
 - **The audit** — everything wrong with a site's legal texts, worst first, each with a remedy.
-- **Version history** (Pro) — publishing freezes a document into an immutable version, with a line
-  diff between any two.
+- **Publishing** — compiling writes a draft; publishing puts it on the site and freezes it into an
+  immutable version. Visitors only ever see published text, so a profile edit never goes live
+  half-typed. Before- and after-publish events let a module tell legal when a version goes out.
+- **Version history** (Pro) — every published version, with a line diff between any two.
 - **Console commands** (Pro) — `jack/documents/compile`, `jack/documents/check`,
   `jack/documents/list`, `jack/inventory/detect`, `jack/inventory/list`. `check` and `detect` exit
   non-zero, for CI.

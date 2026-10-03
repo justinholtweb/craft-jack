@@ -4,10 +4,12 @@ namespace justinholtweb\jack\controllers;
 
 use Craft;
 use craft\helpers\Json;
+use craft\models\Site;
 use craft\web\Controller;
 use justinholtweb\jack\elements\Document;
 use justinholtweb\jack\models\Edition;
 use justinholtweb\jack\Plugin;
+use justinholtweb\jack\records\VersionRecord;
 use yii\web\ForbiddenHttpException;
 use yii\web\NotFoundHttpException;
 use yii\web\Response;
@@ -72,11 +74,7 @@ class DocumentsController extends Controller
             throw new ForbiddenHttpException(Craft::t('jack', 'Jack Lite creates an imprint and a privacy policy. The other document types are a Pro feature.'));
         }
 
-        $siteId = Edition::allowsMultiSite($plugin->isPro())
-            ? (int)($this->request->getBodyParam('siteId') ?: Craft::$app->getSites()->getCurrentSite()->id)
-            : Craft::$app->getSites()->getPrimarySite()->id;
-
-        $document = $plugin->documents->create($documentType, $siteId);
+        $document = $plugin->documents->create($documentType, $this->requireSite()->id);
 
         if (!$document) {
             $this->setFailFlash(Craft::t('jack', 'Couldn’t create the document.'));
@@ -92,15 +90,12 @@ class DocumentsController extends Controller
     /**
      * @throws NotFoundHttpException
      */
-    public function actionEdit(int $documentId): Response
+    public function actionEdit(int $documentId, ?Document $document = null): Response
     {
         $plugin = Plugin::getInstance();
-        $siteId = $this->request->getParam('siteId');
-        $document = Document::find()->id($documentId)->siteId($siteId)->status(null)->one();
 
-        if (!$document) {
-            throw new NotFoundHttpException('Document not found');
-        }
+        // A failed save hands its element back through the route params, errors and all.
+        $document ??= $this->requireDocument($documentId, $this->requireSite(false));
 
         $compiled = $document->wouldCompile();
 
@@ -119,7 +114,9 @@ class DocumentsController extends Controller
             'sites' => Edition::allowsMultiSite($plugin->isPro())
                 ? Craft::$app->getSites()->getAllSites()
                 : [Craft::$app->getSites()->getPrimarySite()],
-            'versionCount' => count($plugin->documents->versions($document->id, $document->siteId, 500)),
+            'versionCount' => (int)VersionRecord::find()
+                ->where(['documentId' => $document->id, 'siteId' => $document->siteId])
+                ->count(),
         ]);
     }
 
@@ -129,13 +126,7 @@ class DocumentsController extends Controller
         $this->requirePermission(Plugin::PERMISSION_MANAGE);
 
         $plugin = Plugin::getInstance();
-        $documentId = (int)$this->request->getRequiredBodyParam('documentId');
-        $siteId = (int)$this->request->getRequiredBodyParam('siteId');
-        $document = Document::find()->id($documentId)->siteId($siteId)->status(null)->one();
-
-        if (!$document) {
-            throw new NotFoundHttpException('Document not found');
-        }
+        $document = $this->requireDocument((int)$this->request->getRequiredBodyParam('documentId'), $this->requireSite());
 
         $document->title = $this->request->getBodyParam('title', $document->title);
         $document->slug = $this->request->getBodyParam('slug', $document->slug);
@@ -167,18 +158,12 @@ class DocumentsController extends Controller
         $this->requirePostRequest();
         $this->requirePermission(Plugin::PERMISSION_MANAGE);
 
-        $documentId = (int)$this->request->getRequiredBodyParam('documentId');
-        $siteId = (int)$this->request->getBodyParam('siteId', Craft::$app->getSites()->getCurrentSite()->id);
-        $document = Document::find()->id($documentId)->siteId($siteId)->status(null)->one();
-
-        if (!$document) {
-            throw new NotFoundHttpException('Document not found');
-        }
+        $document = $this->requireDocument((int)$this->request->getRequiredBodyParam('documentId'), $this->requireSite());
 
         Plugin::getInstance()->documents->compile($document);
 
         if ($this->request->getAcceptsJson()) {
-            return $this->asJson(['success' => true]);
+            return $this->asSuccess(Craft::t('jack', 'Document recompiled.'));
         }
 
         $this->setSuccessFlash(Craft::t('jack', 'Document recompiled.'));
@@ -191,14 +176,7 @@ class DocumentsController extends Controller
         $this->requirePostRequest();
         $this->requirePermission(Plugin::PERMISSION_PUBLISH);
 
-        $documentId = (int)$this->request->getRequiredBodyParam('documentId');
-        $siteId = (int)$this->request->getBodyParam('siteId', Craft::$app->getSites()->getCurrentSite()->id);
-        $document = Document::find()->id($documentId)->siteId($siteId)->status(null)->one();
-
-        if (!$document) {
-            throw new NotFoundHttpException('Document not found');
-        }
-
+        $document = $this->requireDocument((int)$this->request->getRequiredBodyParam('documentId'), $this->requireSite());
         $plugin = Plugin::getInstance();
 
         // Publish what is current, not what was compiled a fortnight ago.
@@ -206,7 +184,7 @@ class DocumentsController extends Controller
         $published = $plugin->documents->publish($document, $this->request->getBodyParam('note'));
 
         if (!$published) {
-            $this->setFailFlash(Craft::t('jack', 'Couldn’t publish — the document has no text.'));
+            $this->setFailFlash(Craft::t('jack', 'Couldn’t publish. The document has no text.'));
 
             return $this->redirect($document->getCpEditUrl());
         }
@@ -241,16 +219,11 @@ class DocumentsController extends Controller
             throw new ForbiddenHttpException(Craft::t('jack', 'Version history is a Pro feature.'));
         }
 
-        $siteId = (int)($this->request->getParam('siteId') ?: Craft::$app->getSites()->getCurrentSite()->id);
-        $document = Document::find()->id($documentId)->siteId($siteId)->status(null)->one();
-
-        if (!$document) {
-            throw new NotFoundHttpException('Document not found');
-        }
+        $document = $this->requireDocument($documentId, $this->requireSite(false));
 
         return $this->renderTemplate('jack/documents/_history', [
             'document' => $document,
-            'versions' => $plugin->documents->versions($document->id, $siteId),
+            'versions' => $plugin->documents->versions($document->id, $document->siteId),
         ]);
     }
 
@@ -262,24 +235,18 @@ class DocumentsController extends Controller
             throw new ForbiddenHttpException(Craft::t('jack', 'Comparing versions is a Pro feature.'));
         }
 
-        $siteId = (int)($this->request->getParam('siteId') ?: Craft::$app->getSites()->getCurrentSite()->id);
-        $document = Document::find()->id($documentId)->siteId($siteId)->status(null)->one();
-
-        if (!$document) {
-            throw new NotFoundHttpException('Document not found');
-        }
-
-        $versions = $plugin->documents->versions($document->id, $siteId);
+        $document = $this->requireDocument($documentId, $this->requireSite(false));
+        $versions = $plugin->documents->versions($document->id, $document->siteId);
         $fromId = (int)$this->request->getParam('from');
         $toId = (int)$this->request->getParam('to');
 
-        $from = $fromId ? $plugin->documents->version($fromId) : ($versions[1] ?? null);
-        $to = $toId ? $plugin->documents->version($toId) : ($versions[0] ?? null);
+        $from = $fromId ? $this->requireVersion($fromId, $document) : ($versions[1] ?? null);
+        $to = $toId ? $this->requireVersion($toId, $document) : ($versions[0] ?? null);
 
         // "Compare with what it says now" is the comparison people actually want, so the current
         // compiled text stands in whenever there is nothing newer to compare against.
-        $after = $to?->html ?? (string)$document->compiledHtml;
-        $before = $from?->html ?? '';
+        $after = $to->html ?? (string)$document->compiledHtml;
+        $before = $from->html ?? '';
 
         return $this->renderTemplate('jack/documents/_compare', [
             'document' => $document,
@@ -292,9 +259,19 @@ class DocumentsController extends Controller
 
     /**
      * The front end, when no template has been configured.
+     *
+     * Reachable only as the document's own URL. Called directly through `actions/`, it would be
+     * a second, indexable copy of the text that ignores the "Give documents their own URLs"
+     * setting, which exists to prevent exactly that.
      */
     public function actionRender(int $documentId, ?int $siteId = null): Response
     {
+        $matched = Craft::$app->getUrlManager()->getMatchedElement();
+
+        if (!$matched instanceof Document || $matched->id !== $documentId) {
+            throw new NotFoundHttpException('Document not found');
+        }
+
         $document = Document::find()->id($documentId)->siteId($siteId)->one();
 
         if (!$document) {
@@ -305,6 +282,73 @@ class DocumentsController extends Controller
             'document' => $document,
             'body' => Plugin::getInstance()->renderer->render($document, ['toc' => true]),
         ], \craft\web\View::TEMPLATE_MODE_CP);
+    }
+
+    /**
+     * The site a request is about, checked.
+     *
+     * Read from `siteId`, or the `site` handle Craft's own element links carry. Lite works on the
+     * primary site only, and everywhere the user needs Craft's own permission for that site: a
+     * translator for one language should not be able to rewrite another's privacy policy.
+     *
+     * @throws ForbiddenHttpException
+     * @throws NotFoundHttpException
+     */
+    private function requireSite(bool $forWrite = true): Site
+    {
+        $sites = Craft::$app->getSites();
+        $siteId = $this->request->getParam('siteId');
+        $handle = $this->request->getQueryParam('site');
+
+        $site = match (true) {
+            $siteId !== null && $siteId !== '' => $sites->getSiteById((int)$siteId),
+            is_string($handle) && $handle !== '' => $sites->getSiteByHandle($handle),
+            default => $sites->getCurrentSite(),
+        };
+
+        if (!$site) {
+            throw new NotFoundHttpException('Site not found');
+        }
+
+        if ($forWrite && !Edition::allowsMultiSite(Plugin::getInstance()->isPro()) && !$site->primary) {
+            throw new ForbiddenHttpException(Craft::t('jack', 'Jack Lite works on the primary site. Other sites are a Pro feature.'));
+        }
+
+        if ($sites->getTotalSites() > 1) {
+            $this->requirePermission('editSite:' . $site->uid);
+        }
+
+        return $site;
+    }
+
+    /**
+     * @throws NotFoundHttpException
+     */
+    private function requireDocument(int $documentId, Site $site): Document
+    {
+        $document = Document::find()->id($documentId)->siteId($site->id)->status(null)->one();
+
+        if (!$document) {
+            throw new NotFoundHttpException('Document not found');
+        }
+
+        return $document;
+    }
+
+    /**
+     * A version, but only one of this document on this site; any other id is a 404.
+     *
+     * @throws NotFoundHttpException
+     */
+    private function requireVersion(int $versionId, Document $document): VersionRecord
+    {
+        $version = Plugin::getInstance()->documents->version($versionId);
+
+        if (!$version || (int)$version->documentId !== $document->id || (int)$version->siteId !== $document->siteId) {
+            throw new NotFoundHttpException('Version not found');
+        }
+
+        return $version;
     }
 
     /**

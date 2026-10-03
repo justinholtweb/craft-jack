@@ -22,8 +22,8 @@ Three things go in:
 | | |
 |---|---|
 | **The profile** | Who you are. Company name, address, register entry, VAT ID, data protection officer, hosting provider — about sixty facts, entered once. |
-| **The inventory** | Who you hand data to. Google Analytics, Stripe, YouTube, your host, your own contact form. Forty-four services ship with Jack, described in full. |
-| **The library** | Forty-six clauses and the processor registry, shipped inside the plugin and stamped with the date they were last reviewed. |
+| **The inventory** | Who you hand data to. Google Analytics, Stripe, YouTube, your host, your own contact form. Forty-one third-party services ship with Jack, described in full, plus five things the site does itself, like its contact form. |
+| **The library** | Fifty-nine clauses and the processor registry, shipped inside the plugin and stamped with the date they were last reviewed. |
 
 One document comes out. The compiler is a pure function of the three, which is what makes the rest
 possible: it can tell you a published document has drifted from what it would say now, a diff
@@ -61,8 +61,10 @@ Then, in the control panel:
    progress bar tells you how much of the library you have unlocked.
 2. **Jack → Inventory.** Add the services this site uses. On Pro, *Find undeclared services* reads
    your templates, your installed plugins and your environment and tells you what you missed.
-3. **Jack → Documents → New.** Pick a document. It is written immediately.
-4. **Jack → Audit.** Everything wrong, worst first, each with a remedy.
+3. **Jack → Documents → New.** Pick a document. It is written immediately, as a draft.
+4. **Read it, then Publish.** Visitors only ever see a published version. Compiling is automatic;
+   putting text in front of the public is a deliberate act somebody can be asked to sign off.
+5. **Jack → Audit.** Everything wrong, worst first, each with a remedy.
 
 ## Putting a document on the site
 
@@ -118,9 +120,11 @@ site. Jack watches three things:
 - **The inventory moved.** Somebody added a payment provider. The services section changed.
 - **The profile moved.** You moved office. The imprint has your old address on it.
 
-All three show up the same way — the document is marked out of date, and Pro shows exactly which
-paragraphs differ. With *recompile automatically* on (the default) documents follow the facts by
-themselves; turn it off if legal text has to be reviewed before it goes live.
+All three show up the same way: the document is marked out of date, and Pro shows exactly which
+paragraphs differ. With *recompile automatically* on (the default) the drafts follow the facts by
+themselves, and the audit tells you when a draft has changes that are not published yet. Nothing
+reaches the site until somebody publishes it, so a half-typed address never appears on a live
+imprint.
 
 ### In CI
 
@@ -142,11 +146,12 @@ statutory withdrawal instructions and model form, standalone withdrawal instruct
 accessibility statement, and a social media privacy policy for your pages on other people's
 platforms.
 
-**Jurisdictions.** German-first — DDG, TDDDG, MStV, VSBG, EGBGB — with GDPR throughout, plus
-Austria, Switzerland, the EU generally, the UK, and a CCPA/CPRA layer for California. Every clause
-is written in German and English.
+**Jurisdictions.** German-first — DDG, TDDDG, MStV, VSBG, EGBGB — with GDPR throughout, which
+also covers Austria and the rest of the EU, plus a CCPA/CPRA notice for California. The profile
+can name Switzerland or the UK as the primary audience, but there are no clauses written for the
+Swiss FADP or UK GDPR yet: have those texts checked. Every clause is written in German and English.
 
-**Processors.** Forty-four, with provider, address, purpose, data categories, legal basis,
+**Processors.** Forty-one third parties, with provider, address, purpose, data categories, legal basis,
 retention, transfer mechanism and cookies: Google Analytics, Tag Manager, Ads, Matomo, Plausible,
 Fathom, Hotjar, Clarity, Meta Pixel, LinkedIn, TikTok, Pinterest, Microsoft Advertising, Stripe,
 PayPal, Klarna, Mollie, YouTube, Vimeo, Spotify, SoundCloud, Google Fonts, Adobe Fonts, Font
@@ -185,20 +190,22 @@ with unusual processing needs advice, not a generator.
 | Version history and diffs | | ● |
 | Console commands and the CI check | | ● |
 
-A document compiled under Pro keeps rendering if the licence lapses. A privacy policy that 404s
+Pro is $99, then $79 a year for updates. Publishing works in both editions.
+
+A document published under Pro keeps rendering if the licence lapses. A privacy policy that 404s
 because of a billing problem is a worse outcome than any it could prevent.
 
 ## Settings
 
 | Setting | What it does |
 |---|---|
-| `autoCompile` | Rebuild every document when the profile or inventory changes. Default on. |
+| `autoCompile` | Rebuild every document's draft when the profile or inventory changes. Default on. The site keeps showing the published version. |
 | `enableDocumentUrls` | Give documents front-end pages of their own. Turn off if the site publishes its legal texts through its own entries — two copies is one too many. |
 | `documentTemplate` | Your template, rendered with a `document` variable. Empty means Jack's own plain page. |
 | `showLastUpdated` | Print a “Stand:” / “Last updated:” line. |
-| `purifyOutput` | Run text *you* have rewritten through HTML Purifier. Library text is never touched. |
+| `purifyOutput` | Restrict text *you* have rewritten to basic text markup. Off allows more HTML, but HTML Purifier still runs, so scripts and `javascript:` links never pass. Library text is never touched. |
 | `detectorPaths` | Directories the detector reads. Compiled JavaScript is worth including. |
 
 ## Licence
 
-Proprietary. See `LICENSE.md`.
+Jack is licensed under the [Craft License](LICENSE.md).

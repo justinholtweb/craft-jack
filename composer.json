@@ -2,7 +2,6 @@
     "name": "justinholtweb/craft-jack",
     "description": "Legal texts for Craft CMS — imprint, privacy policy, cookies and terms, generated from the facts about your site and kept current as the law moves.",
     "type": "craft-plugin",
-    "version": "5.0.0",
     "keywords": [
         "craft",
         "cms",
@@ -21,7 +20,8 @@
         "compliance"
     ],
     "license": "proprietary",
-    "minimum-stability": "dev",
+    "homepage": "https://justinholt.com/plugins/craft-jack",
+    "minimum-stability": "stable",
     "prefer-stable": true,
     "authors": [
         {
@@ -30,10 +30,10 @@
         }
     ],
     "support": {
-        "docs": "https://craft-jack.com/docs",
-        "source": "https://github.com/justinholtweb/craft-jack",
+        "email": "justin@justinholt.com",
         "issues": "https://github.com/justinholtweb/craft-jack/issues",
-        "email": "justin@justinholt.com"
+        "source": "https://github.com/justinholtweb/craft-jack",
+        "docs": "https://justinholt.com/plugins/craft-jack/docs"
     },
     "require": {
         "php": "^8.2",
@@ -44,26 +44,17 @@
     "require-dev": {
         "craftcms/ecs": "dev-main",
         "craftcms/phpstan": "dev-main",
-        "phpunit/phpunit": "^10.5"
+        "phpstan/phpstan": "^1.12 || ^2.2"
     },
     "autoload": {
         "psr-4": {
             "justinholtweb\\jack\\": "src/"
         }
     },
-    "autoload-dev": {
-        "psr-4": {
-            "justinholtweb\\jack\\tests\\": "tests/"
-        }
-    },
-    "scripts": {
-        "test": "phpunit"
-    },
     "config": {
         "allow-plugins": {
-            "yiisoft/yii2-composer": true,
             "craftcms/plugin-installer": true,
-            "craftcms/generator": true
+            "yiisoft/yii2-composer": true
         }
     },
     "extra": {
@@ -71,8 +62,13 @@
         "handle": "jack",
         "developer": "Justin Holt",
         "developerUrl": "https://justinholt.com",
-        "documentationUrl": "https://craft-jack.com/docs",
+        "documentationUrl": "https://justinholt.com/plugins/craft-jack/docs",
         "changelogUrl": "https://raw.githubusercontent.com/justinholtweb/craft-jack/main/CHANGELOG.md",
         "class": "justinholtweb\\jack\\Plugin"
+    },
+    "scripts": {
+        "phpstan": "phpstan analyse --memory-limit=1G",
+        "ecs": "ecs check --ansi",
+        "ecs-fix": "ecs check --fix --ansi"
     }
 }

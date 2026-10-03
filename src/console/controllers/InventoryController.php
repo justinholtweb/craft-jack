@@ -6,6 +6,7 @@ use craft\console\Controller;
 use craft\helpers\Console;
 use justinholtweb\jack\models\Edition;
 use justinholtweb\jack\Plugin;
+use yii\console\Exception;
 use yii\console\ExitCode;
 
 /**
@@ -27,10 +28,10 @@ class InventoryController extends Controller
             return false;
         }
 
+        // A refusal has to fail the build. Returning false here exits 0, which would make
+        // `check` and `detect` pass on any site whose licence has lapsed.
         if (!Edition::allowsConsole(Plugin::getInstance()->isPro())) {
-            $this->stderr("The console commands are a Jack Pro feature.\n", Console::FG_YELLOW);
-
-            return false;
+            throw new Exception('The console commands are a Jack Pro feature.');
         }
 
         return true;

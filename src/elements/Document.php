@@ -4,8 +4,8 @@ namespace justinholtweb\jack\elements;
 
 use Craft;
 use craft\base\Element;
-use craft\elements\db\ElementQueryInterface;
 use craft\helpers\Cp;
+use craft\helpers\DateTimeHelper;
 use craft\helpers\Db;
 use craft\helpers\Html;
 use craft\helpers\Json;
@@ -33,6 +33,7 @@ use yii\web\Response;
  * end up with a German privacy policy on an English page.
  *
  * @property-read string|null $compiledHtml
+ * @property-read string|null $publishedHtml
  */
 class Document extends Element
 {
@@ -62,18 +63,33 @@ class Document extends Element
 
     // Per-site, loaded from jack_documentsites for whichever site this element was fetched for.
     public ?string $compiledHtml = null;
+    public ?string $publishedHtml = null;
     public ?string $compiledText = null;
     public ?string $stamp = null;
     public ?string $overrides = null;
     public ?string $warnings = null;
     public ?string $missingFacts = null;
-    public ?string $compiledAt = null;
-    public ?string $publishedAt = null;
+    /**
+     * Real dates, not the naive UTC strings the row holds: read back with `new DateTime()` (or
+     * Twig's `|date`) a stored string is taken as system time, and every save moved the stamp
+     * by the site's offset.
+     */
+    public DateTime|string|null $compiledAt = null;
+    public DateTime|string|null $publishedAt = null;
 
     /** @var array{changed: string[], added: string[], removed: string[]}|null */
     private ?array $drift = null;
 
     private ?CompiledDocument $compiled = null;
+
+    public function init(): void
+    {
+        parent::init();
+
+        // Rows from jack_documentsites arrive as naive UTC strings.
+        $this->compiledAt = DateTimeHelper::toDateTime($this->compiledAt) ?: null;
+        $this->publishedAt = DateTimeHelper::toDateTime($this->publishedAt) ?: null;
+    }
 
     // -----------------------------------------------------------------------------------------
     // Element plumbing
@@ -126,7 +142,7 @@ class Document extends Element
         return true;
     }
 
-    public static function find(): ElementQueryInterface
+    public static function find(): DocumentQuery
     {
         return new DocumentQuery(static::class);
     }
@@ -150,7 +166,7 @@ class Document extends Element
         return self::typeLabels()[$this->documentType] ?? $this->documentType;
     }
 
-    protected static function defineSources(string $context = null): array
+    protected static function defineSources(?string $context = null): array
     {
         $sources = [
             [
@@ -206,7 +222,7 @@ class Document extends Element
             'jurisdiction' => Html::encode(strtoupper($this->jurisdiction)),
             'health' => $this->healthHtml(),
             'compiledAt' => $this->compiledAt
-                ? Craft::$app->getFormatter()->asDatetime(new DateTime($this->compiledAt), 'short')
+                ? Craft::$app->getFormatter()->asDatetime($this->compiledAt, 'short')
                 : '<span class="light">' . Craft::t('jack', 'never') . '</span>',
             default => parent::attributeHtml($attribute),
         };
@@ -264,20 +280,20 @@ class Document extends Element
         return ['jack/documents/render', ['documentId' => $this->id, 'siteId' => $this->siteId]];
     }
 
-    public function getCpEditUrl(): ?string
+    /**
+     * Core's getCpEditUrl() wraps this and adds the `site` param, which is what opens the
+     * German document on the German row rather than on whichever site the CP is set to.
+     */
+    protected function cpEditUrl(): ?string
     {
         return UrlHelper::cpUrl('jack/documents/' . $this->id);
     }
 
-    protected function cpEditUrl(): ?string
-    {
-        return $this->getCpEditUrl();
-    }
-
     public function prepareEditScreen(Response $response, string $containerId): void
     {
-        /** @var Response|CpScreenResponseBehavior $response */
-        $response->crumbs([
+        /** @var CpScreenResponseBehavior $behavior */
+        $behavior = $response->getBehavior(CpScreenResponseBehavior::NAME);
+        $behavior->crumbs([
             ['label' => Craft::t('jack', 'Documents'), 'url' => UrlHelper::cpUrl('jack/documents')],
         ]);
     }
@@ -411,18 +427,20 @@ class Document extends Element
      * Craft splices the return value of a reference tag's property into rich text raw, so a
      * footer built in CKEditor can carry the live privacy policy without anybody touching a Twig
      * file — the same trick Legs uses for tables.
+     *
+     * Published text only, like every other way out of Jack.
      */
+    public function getRender(): \Twig\Markup
+    {
+        return Plugin::getInstance()->renderer->render($this);
+    }
+
     /**
      * The handle, which is what a reference tag names.
      */
     public function getRef(): ?string
     {
         return $this->handle;
-    }
-
-    public function getRender(): \Twig\Markup
-    {
-        return Plugin::getInstance()->renderer->render($this);
     }
 
     public function languageForSite(): string
@@ -438,16 +456,31 @@ class Document extends Element
 
     public function canView(\craft\elements\User $user): bool
     {
+        // Parent first, so EVENT_AUTHORIZE_* handlers elsewhere still get a say.
+        if (parent::canView($user)) {
+            return true;
+        }
+
         return $user->can(Plugin::PERMISSION_VIEW);
     }
 
     public function canSave(\craft\elements\User $user): bool
     {
+        // Parent first, so EVENT_AUTHORIZE_* handlers elsewhere still get a say.
+        if (parent::canSave($user)) {
+            return true;
+        }
+
         return $user->can(Plugin::PERMISSION_MANAGE);
     }
 
     public function canDelete(\craft\elements\User $user): bool
     {
+        // Parent first, so EVENT_AUTHORIZE_* handlers elsewhere still get a say.
+        if (parent::canDelete($user)) {
+            return true;
+        }
+
         return $user->can(Plugin::PERMISSION_MANAGE);
     }
 
@@ -490,16 +523,18 @@ class Document extends Element
             ?? new DocumentSiteRecord(['documentId' => $this->id, 'siteId' => $this->siteId]);
 
         $siteRecord->compiledHtml = $this->compiledHtml;
+        $siteRecord->publishedHtml = $this->publishedHtml;
         $siteRecord->compiledText = $this->compiledText;
         $siteRecord->stamp = $this->stamp;
         $siteRecord->overrides = $this->overrides;
         $siteRecord->warnings = $this->warnings;
         $siteRecord->missingFacts = $this->missingFacts;
-        $siteRecord->compiledAt = $this->compiledAt ? Db::prepareDateForDb(new DateTime($this->compiledAt)) : null;
-        $siteRecord->publishedAt = $this->publishedAt ? Db::prepareDateForDb(new DateTime($this->publishedAt)) : null;
+        $siteRecord->compiledAt = Db::prepareDateForDb($this->compiledAt);
+        $siteRecord->publishedAt = Db::prepareDateForDb($this->publishedAt);
         $siteRecord->save(false);
         $this->drift = null;
         $this->compiled = null;
+        Plugin::getInstance()->audit->invalidate();
 
         parent::afterSave($isNew);
     }
@@ -529,6 +564,13 @@ class Document extends Element
                 ->execute();
         }
 
+        Plugin::getInstance()->audit->invalidate();
         parent::afterRestore();
+    }
+
+    public function afterDelete(): void
+    {
+        Plugin::getInstance()->audit->invalidate();
+        parent::afterDelete();
     }
 }

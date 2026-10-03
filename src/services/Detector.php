@@ -206,17 +206,23 @@ class Detector extends Component
         $base = Craft::getAlias('@root') ?: dirname(Craft::$app->getPath()->getConfigPath());
         $files = [];
 
+        $root = realpath($base) ?: $base;
+
         foreach ($settings->detectorPaths as $path) {
             $directory = str_starts_with($path, '/') ? $path : $base . DIRECTORY_SEPARATOR . trim($path, '/');
+            $directory = realpath($directory);
 
-            if (!is_dir($directory)) {
+            // Inside the project only. The report quotes the lines it matched, and a path setting
+            // of `/` or `../` would have it quoting files nobody meant to show in the CP.
+            if ($directory === false || !is_dir($directory) || !str_starts_with($directory . '/', rtrim($root, '/') . '/')) {
                 continue;
             }
 
             try {
                 $files = array_merge($files, FileHelper::findFiles($directory, [
                     'only' => array_map(static fn($extension) => '*.' . ltrim($extension, '.'), $settings->detectorExtensions),
-                    'except' => ['/node_modules/', '/vendor/', '/.git/'],
+                    // Dotfiles are where secrets live (.env, .env.production, .npmrc).
+                    'except' => ['/node_modules/', '/vendor/', '/.git/', '.*'],
                 ]));
             } catch (Throwable $e) {
                 Craft::warning('Jack could not read ' . $directory . ': ' . $e->getMessage(), Plugin::LOG_CATEGORY);
@@ -233,11 +239,26 @@ class Detector extends Component
         return $base && str_starts_with($file, $base) ? ltrim(substr($file, strlen($base)), '/') : $file;
     }
 
+    /**
+     * The line around a match, with anything that looks like a key blanked out.
+     *
+     * The report gets pasted into tickets, and a script tag that carries a measurement ID often
+     * sits next to one that carries a secret.
+     */
     private function excerpt(string $contents, int $offset): string
     {
         $start = max(0, $offset - 40);
         $excerpt = substr($contents, $start, 140);
         $excerpt = preg_replace('~\s+~', ' ', $excerpt) ?? $excerpt;
+        $excerpt = preg_replace(
+            [
+                '~((?:secret|token|password|passwd|api[_-]?key|private[_-]?key|auth)[\w-]*["\']?\s*[:=]\s*["\']?)[^"\'\s,;]+~i',
+                '~\b(?:sk|rk|pk)_(?:live|test)_[A-Za-z0-9]+~',
+                '~\b[A-Za-z0-9_\-]{32,}\b~',
+            ],
+            ['$1[redacted]', '[redacted]', '[redacted]'],
+            $excerpt,
+        ) ?? $excerpt;
 
         return trim($excerpt);
     }

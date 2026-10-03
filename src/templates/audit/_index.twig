@@ -3,48 +3,73 @@
 {% set title = 'Audit'|t('jack') %}
 {% set selectedSubnavItem = 'audit' %}
 
+{% set severities = {
+    critical: { label: 'Critical'|t('jack'), colour: 'red' },
+    warning: { label: 'To fix'|t('jack'), colour: 'orange' },
+    notice: { label: 'Worth knowing'|t('jack'), colour: 'gray' },
+} %}
+
 {% block content %}
     <div class="readable">
         <p>{{ 'Everything wrong with this site’s legal texts, worst first. The expensive failures are absences, and absences never appear on a screen that lists what you have.'|t('jack') }}</p>
     </div>
 
-    <div class="pane" style="margin-bottom: 14px;">
-        <div class="flex" style="gap: 2rem;">
-            <div>
-                <div style="font-size: 2rem; font-weight: 600; color: {{ counts.critical ? '#cf1124' : '#27ab83' }};">{{ counts.critical }}</div>
-                <div class="light smalltext">{{ 'critical'|t('jack') }}</div>
-            </div>
-            <div>
-                <div style="font-size: 2rem; font-weight: 600; color: {{ counts.warning ? '#f0b429' : '#8c95a3' }};">{{ counts.warning }}</div>
-                <div class="light smalltext">{{ 'to fix'|t('jack') }}</div>
-            </div>
-            <div>
-                <div style="font-size: 2rem; font-weight: 600; color: #8c95a3;">{{ counts.notice }}</div>
-                <div class="light smalltext">{{ 'worth knowing'|t('jack') }}</div>
-            </div>
-        </div>
+    <div class="pane jack-audit-summary">
+        <dl class="flex jack-audit-counts">
+            {% for key, severity in severities %}
+                {% set count = counts[key] ?? 0 %}
+                <div class="jack-audit-count{{ count ? ' jack-audit-count--' ~ key : '' }}{{ key == 'critical' and not count ? ' jack-audit-count--clear' : '' }}">
+                    <dt class="light smalltext">{{ severity.label }}</dt>
+                    <dd class="jack-audit-number">{{ count }}</dd>
+                </div>
+            {% endfor %}
+        </dl>
     </div>
 
     {% for finding in findings %}
-        {% set colour = finding.severity == 'critical' ? '#cf1124' : (finding.severity == 'warning' ? '#f0b429' : '#8c95a3') %}
-        <div class="pane" style="margin-bottom: 10px; border-left: 3px solid {{ colour }};">
-            <h3 style="margin: 0 0 4px;">{{ finding.title }}</h3>
-            <p style="margin: 0 0 8px;">{{ finding.detail }}</p>
-            <p style="margin: 0;"><strong>{{ 'Fix:'|t('jack') }}</strong> {{ finding.remedy }}</p>
+        {% set severity = severities[finding.severity] ?? severities.notice %}
+        <section class="pane jack-finding jack-finding--{{ finding.severity }}">
+            <div class="flex flex-nowrap jack-finding-header">
+                <span class="status-label {{ severity.colour }}">
+                    <span class="status {{ severity.colour }}" aria-hidden="true"></span>
+                    <span class="status-label-text">{{ severity.label }}</span>
+                </span>
+                <h2>{{ finding.title }}</h2>
+            </div>
+            <p>{{ finding.detail }}</p>
+            <p><strong>{{ 'Fix:'|t('jack') }}</strong> {{ finding.remedy }}</p>
             {% if finding.citation %}
-                <p class="light smalltext" style="margin: 6px 0 0;">{{ finding.citation }}</p>
+                <p class="light smalltext">{{ finding.citation }}</p>
             {% endif %}
-        </div>
+        </section>
     {% else %}
-        <div class="pane">
+        <div class="zilch">
             <p>{{ 'Nothing to report. Every document exists, compiles cleanly and is current with the library.'|t('jack') }}</p>
         </div>
     {% endfor %}
 
-    <div class="readable" style="margin-top: 2rem;">
+    <div class="readable jack-audit-footer">
         <p class="light smalltext">
             {{ 'Clause library reviewed {date}.'|t('jack', { date: libraryVersion }) }}
             {% if not isPro %} {{ 'Jack Lite does not scan the site for undeclared services — that is where most surprises are.'|t('jack') }}{% endif %}
         </p>
     </div>
 {% endblock %}
+
+{% css %}
+.jack-audit-summary, .jack-finding { margin-block-end: var(--m); }
+.jack-audit-counts { gap: var(--xl); margin: 0; }
+.jack-audit-count { display: flex; flex-direction: column-reverse; }
+.jack-audit-number { margin: 0; font-size: 2rem; font-weight: 600; line-height: 1.2; color: var(--fg-subtle); }
+.jack-audit-count--critical .jack-audit-number { color: var(--fg-error); }
+.jack-audit-count--warning .jack-audit-number { color: var(--fg-warning); }
+.jack-audit-count--clear .jack-audit-number { color: var(--fg-success); }
+.jack-finding { border-inline-start: 3px solid var(--gray-200); }
+.jack-finding--critical { border-inline-start-color: var(--fg-error); }
+.jack-finding--warning { border-inline-start-color: var(--fg-warning); }
+.jack-finding-header { align-items: center; gap: var(--s); margin-block-end: var(--xs); }
+.jack-finding-header h2 { margin: 0; }
+.jack-finding p { margin-block: 0 var(--s); }
+.jack-finding p:last-child { margin-block-end: 0; }
+.jack-audit-footer { margin-block-start: var(--xl); }
+{% endcss %}

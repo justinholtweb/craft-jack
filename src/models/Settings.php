@@ -32,7 +32,10 @@ class Settings extends Model
     /** Print a "last updated" line at the foot of every rendered document. */
     public bool $showLastUpdated = true;
 
-    /** Run compiled HTML through HTML Purifier. Applies to overrides and custom sections. */
+    /**
+     * Restrict overrides and custom sections to basic text markup. Off widens what an editor may
+     * write; HTML Purifier still runs either way, so scripts and `javascript:` links never pass.
+     */
     public bool $purifyOutput = true;
 
     /**

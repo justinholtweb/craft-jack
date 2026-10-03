@@ -12,6 +12,12 @@
     {% endif %}
 {% endblock %}
 
+{% set libraryLabel = entry.definition.label ?? entry.serviceKey %}
+{% if libraryLabel is iterable %}
+    {% set language = craft.app.language|slice(0, 2) %}
+    {% set libraryLabel = libraryLabel[language] ?? libraryLabel.en ?? entry.serviceKey %}
+{% endif %}
+
 {% block content %}
     {{ actionInput('jack/inventory/save') }}
     {{ hiddenInput('serviceKey', entry.serviceKey) }}
@@ -28,7 +34,7 @@
         label: 'Name'|t('jack'),
         name: 'label',
         value: entry.overrides.label ?? '',
-        placeholder: entry.definition.label ?? entry.serviceKey,
+        placeholder: libraryLabel,
         disabled: not canManage,
     }) }}
 
@@ -73,7 +79,7 @@
     </div>
 
     {% for language, languageLabel in { de: 'German'|t('jack'), en: 'English'|t('jack') } %}
-        <div class="pane" style="margin-bottom: 14px;">
+        <div class="pane jack-group">
             <h3>{{ languageLabel }}</h3>
 
             {{ forms.textField({
@@ -132,8 +138,14 @@
 
     {% if entry.cookies()|length %}
         <div class="pane">
-            <h3>{{ 'Cookies'|t('jack') }}</h3>
-            <table class="data fullwidth">
+            <h3 id="jack-cookies-heading">{{ 'Cookies'|t('jack') }}</h3>
+            <table class="data fullwidth" aria-labelledby="jack-cookies-heading">
+                <thead>
+                    <tr>
+                        <th scope="col">{{ 'Name'|t('jack') }}</th>
+                        <th scope="col">{{ 'Duration'|t('jack') }}</th>
+                    </tr>
+                </thead>
                 <tbody>
                     {% for cookie in entry.cookiesFor('en') %}
                         <tr><td><code>{{ cookie.name }}</code></td><td class="light">{{ cookie.duration }}</td></tr>
@@ -155,18 +167,22 @@
         }) }}
     </div>
 
-    <div class="meta read-only">
+    <dl class="meta read-only">
         <div class="data">
-            <h5 class="heading">{{ 'Key'|t('jack') }}</h5>
-            <div class="value"><code>{{ entry.serviceKey }}</code></div>
+            <dt class="heading">{{ 'Key'|t('jack') }}</dt>
+            <dd class="value"><code>{{ entry.serviceKey }}</code></dd>
         </div>
         <div class="data">
-            <h5 class="heading">{{ 'Category'|t('jack') }}</h5>
-            <div class="value">{{ entry.category() }}</div>
+            <dt class="heading">{{ 'Category'|t('jack') }}</dt>
+            <dd class="value">{{ entry.category() }}</dd>
         </div>
         <div class="data">
-            <h5 class="heading">{{ 'Source'|t('jack') }}</h5>
-            <div class="value">{{ entry.isKnown() ? 'Jack’s library'|t('jack') : 'Yours'|t('jack') }}</div>
+            <dt class="heading">{{ 'Source'|t('jack') }}</dt>
+            <dd class="value">{{ entry.isKnown() ? 'Jack’s library'|t('jack') : 'Yours'|t('jack') }}</dd>
         </div>
-    </div>
+    </dl>
 {% endblock %}
+
+{% css %}
+.jack-group { margin-block-end: var(--m); }
+{% endcss %}

@@ -65,15 +65,16 @@ class Plugin extends BasePlugin
     public const EDITION_LITE = 'lite';
     public const EDITION_PRO = 'pro';
 
-    public const PERMISSION_VIEW = 'jack:viewDocuments';
-    public const PERMISSION_MANAGE = 'jack:manageDocuments';
-    public const PERMISSION_PROFILE = 'jack:manageProfile';
-    public const PERMISSION_PUBLISH = 'jack:publishDocuments';
+    // Kebab-case: Craft lower-cases permission names when it stores a grant.
+    public const PERMISSION_VIEW = 'jack:view-documents';
+    public const PERMISSION_MANAGE = 'jack:manage-documents';
+    public const PERMISSION_PROFILE = 'jack:manage-profile';
+    public const PERMISSION_PUBLISH = 'jack:publish-documents';
 
     /** Log category used by everything in the plugin. */
     public const LOG_CATEGORY = 'jack';
 
-    public string $schemaVersion = '1.0.0';
+    public string $schemaVersion = '1.0.1';
     public bool $hasCpSection = true;
     public bool $hasCpSettings = true;
 
@@ -120,6 +121,13 @@ class Plugin extends BasePlugin
 
     public function getCpNavItem(): ?array
     {
+        $user = Craft::$app->getUser();
+
+        // Every screen needs the view permission, so without it there is nothing to link to.
+        if (!$user->checkPermission(self::PERMISSION_VIEW)) {
+            return null;
+        }
+
         $item = parent::getCpNavItem();
         $item['label'] = Craft::t('jack', 'Jack');
 
@@ -142,7 +150,7 @@ class Plugin extends BasePlugin
             ],
         ];
 
-        if (Craft::$app->getUser()->getIsAdmin()) {
+        if ($user->getIsAdmin()) {
             $item['subnav']['settings'] = [
                 'label' => Craft::t('jack', 'Settings'),
                 'url' => 'settings/plugins/jack',
@@ -150,8 +158,8 @@ class Plugin extends BasePlugin
         }
 
         // A missing imprint is worth interrupting somebody about, and this badge is the only place
-        // they will see it without going looking — which is the entire failure mode Jack exists
-        // for.
+        // they will see it without going looking, which is the entire failure mode Jack exists
+        // for. The count is cached; see Audit::problemCount().
         try {
             $problems = $this->audit->problemCount();
 
@@ -172,7 +180,7 @@ class Plugin extends BasePlugin
 
     protected function settingsHtml(): ?string
     {
-        return Craft::$app->getView()->renderTemplate('jack/settings', [
+        return Craft::$app->getView()->renderTemplate('jack/_settings', [
             'settings' => $this->getSettings(),
             'plugin' => $this,
         ]);

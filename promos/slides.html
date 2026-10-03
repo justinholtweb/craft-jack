@@ -1,0 +1,719 @@
+<!DOCTYPE html>
+<!-- handmade: hand-tuned deck -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Jack — Plugin Store promos</title>
+<link rel="stylesheet" href="fonts.css">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --charcoal: #0f0f1a;
+    --charcoal-light: #1a1a2e;
+    --charcoal-lighter: #252540;
+    --accent: #2E4374;        /* the icon tile: legal-ink navy */
+    --accent-light: #9FB4E6;  /* pale steel blue: ticks, rules, inline code, the Pro column */
+    --accent-mid: #6F88C4;    /* gradient headline start */
+    --gold: #ffd166;
+    --off-white: #f0f0f5;
+    --ok: #5ee0a0;
+    --bad: #ff6b6b;
+  }
+
+  html { background: #000; }
+
+  body {
+    font-family: 'Inter', -apple-system, sans-serif;
+    color: var(--off-white);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ---- slide shell ---------------------------------------------------- */
+  .slide {
+    position: relative;
+    width: 1920px;
+    height: 1080px;
+    overflow: hidden;
+    background:
+      radial-gradient(ellipse at 85% 15%, rgba(46, 67, 116, 0.60) 0%, transparent 40%),
+      radial-gradient(ellipse at 65% 5%,  rgba(159, 180, 230, 0.12) 0%, transparent 35%),
+      radial-gradient(ellipse at 15% 85%, rgba(255, 209, 102, 0.06) 0%, transparent 40%),
+      radial-gradient(ellipse at 35% 95%, rgba(46, 67, 116, 0.30) 0%, transparent 35%),
+      linear-gradient(135deg, #0f0f1a 0%, #10142a 30%, #121a33 60%, #0f0f1a 100%);
+  }
+
+  /* Oversized watermark: the glyph from src/icon-mask.svg, with no tile. Anchored bottom-right,
+     running off the edge. */
+  .slide::after {
+    content: '';
+    position: absolute;
+    top: 40%;
+    right: -26%;
+    width: 1500px;
+    height: 1500px;
+    background: url('assets/watermark.svg') no-repeat center / contain;
+    opacity: 0.025;
+    pointer-events: none;
+  }
+
+  /* The cover has the icon itself; a watermark behind it reads as its shadow. */
+  .cover::after { display: none; }
+
+  .slide::before {
+    content: '';
+    position: absolute;
+    inset: 0 0 auto 0;
+    height: 6px;
+    background: linear-gradient(90deg, var(--accent-mid), var(--accent-light), var(--gold), var(--accent-mid));
+    z-index: 5;
+  }
+
+  .inner {
+    position: relative;
+    z-index: 2;
+    height: 100%;
+    padding: 118px 130px;
+    display: flex;
+    align-items: center;
+  }
+
+  /* ---- type ------------------------------------------------------------ */
+  .eyebrow {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    font-size: 20px;
+    font-weight: 500;
+    letter-spacing: 0.32em;
+    text-transform: uppercase;
+    color: rgba(240, 240, 245, 0.62);
+    margin-bottom: 34px;
+  }
+  .eyebrow .rule {
+    width: 58px;
+    height: 3px;
+    border-radius: 2px;
+    background: var(--accent-light);
+  }
+  /* Navy alone disappears on charcoal; the pale rim is what makes the pill read as a pill. */
+  .eyebrow .pro {
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    color: #fff;
+    background: var(--accent);
+    border: 1.5px solid var(--accent-light);
+    border-radius: 999px;
+    padding: 5px 14px;
+  }
+
+  h1, h2 {
+    font-family: 'Jersey 20', sans-serif;
+    font-weight: 400;
+    line-height: 0.9;
+    letter-spacing: 0.005em;
+  }
+
+  /* The tile navy is far too dark to open a gradient on charcoal, so the text starts at a mid blue. */
+  .gradient-text {
+    background: linear-gradient(100deg, #6F88C4 0%, #9FB4E6 38%, #ffd166 68%, #6F88C4 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .lede {
+    font-size: 34px;
+    line-height: 1.5;
+    color: rgba(240, 240, 245, 0.72);
+  }
+
+  .mono { font-family: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace; }
+  code, .code { font-family: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace; }
+
+  /* ---- cover ----------------------------------------------------------- */
+  .cover .inner { gap: 90px; }
+  .cover .copy { flex: 1 1 auto; }
+  .cover h1 { font-size: 200px; margin-bottom: 26px; display: inline-block; padding-right: 8px; }
+  .cover .tagline {
+    font-size: 46px;
+    line-height: 1.25;
+    color: rgba(240, 240, 245, 0.82);
+    margin-bottom: 26px;
+    max-width: 980px;
+  }
+  .cover .lede { font-size: 30px; max-width: 940px; margin-bottom: 46px; color: rgba(240,240,245,0.6); }
+  .cover .badges { display: flex; gap: 18px; align-items: center; }
+  .badge {
+    font-size: 24px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 14px 26px;
+    border-radius: 999px;
+    border: 2px solid rgba(159, 180, 230, 0.45);
+    color: rgba(240, 240, 245, 0.85);
+  }
+  .badge.price { background: var(--accent); border-color: var(--accent-light); color: #fff; }
+  .cover .mark { flex: 0 0 auto; }
+  .cover .mark img { width: 420px; height: 420px; display: block; }
+
+  /* ---- feature slides -------------------------------------------------- */
+  .feature .copy { flex: 0 0 auto; }
+  .feature h2 { font-size: 96px; margin-bottom: 30px; }
+
+  .points { list-style: none; margin-top: 40px; display: flex; flex-direction: column; gap: 20px; }
+  .points li {
+    display: flex;
+    gap: 16px;
+    font-size: 25px;
+    line-height: 1.4;
+    color: rgba(240, 240, 245, 0.66);
+  }
+  .points li svg { flex: 0 0 auto; margin-top: 4px; }
+  .points code { font-size: 22px; color: var(--accent-light); }
+
+  /* ---- light Craft 5 CP frame -------------------------------------------
+     Every string inside one is a translation key, a column heading or a finding from src/. */
+  .cpframe {
+    position: absolute; right: 100px; top: 50%; transform: translateY(-50%); z-index: 3;
+    width: 1040px; border-radius: 14px; overflow: hidden; background: #e4e9f0;
+    border: 1px solid rgba(255,255,255,0.10);
+    box-shadow: 0 40px 90px rgba(0,0,0,0.55), 0 6px 18px rgba(0,0,0,0.35);
+  }
+  .cpframe .chrome { display: flex; align-items: center; gap: 9px; padding: 13px 18px; background: linear-gradient(180deg, #2a2a3d 0%, #21212f 100%); }
+  .cpframe .chrome b { width: 12px; height: 12px; border-radius: 50%; }
+  .cpframe .chrome b:nth-child(1) { background: #ff5f57; }
+  .cpframe .chrome b:nth-child(2) { background: #febc2e; }
+  .cpframe .chrome b:nth-child(3) { background: #28c840; }
+  .cpframe .chrome em { margin-left: 12px; font-style: normal; font-size: 18px; color: rgba(240,240,245,0.55); }
+  .cpframe .body { padding: 24px 26px; }
+  .cp-title { display: flex; align-items: center; justify-content: space-between; margin: 0 4px 14px; }
+  .cp-title h3 { font-size: 30px; font-weight: 700; color: #1f2933; }
+  .cp-btn { display: inline-block; font-size: 17px; font-weight: 500; color: #3f4d5a; background: #dfe5ec; border-radius: 6px; padding: 9px 16px; white-space: nowrap; }
+  .cp-btn.small { font-size: 15px; padding: 5px 11px; }
+  .cp-btn.submit { background: #e12d39; color: #fff; }
+  .cp-pane { background: #fff; border-radius: 8px; box-shadow: 0 0 0 1px rgba(31,41,51,0.1), 0 2px 12px rgba(31,41,51,0.08); padding: 22px 26px; color: #3f4d5a; }
+  .cp-pane + .cp-pane { margin-top: 12px; }
+  .cp-pane h4 { font-size: 21px; font-weight: 700; color: #1f2933; margin-bottom: 8px; }
+  .cp-pane p { font-size: 19px; line-height: 1.45; }
+  .cp-intro { font-size: 18px; line-height: 1.45; color: #3f4d5a; margin: 0 4px 16px; max-width: 940px; }
+  .cp-light { color: #6b7783; }
+  .cp-small { font-size: 15px; }
+  .cp-table { width: 100%; border-collapse: collapse; font-size: 18px; }
+  .cp-table th { text-align: left; font-weight: 600; color: #5f6c7b; background: #f3f6f9; padding: 10px 12px; border-bottom: 1px solid #e3e8ee; white-space: nowrap; }
+  .cp-table td { padding: 9px 12px; border-bottom: 1px solid #eef1f4; color: #33404c; vertical-align: middle; }
+  .cp-table tr:last-child td { border-bottom: 0; }
+  .cp-table .nowrap { white-space: nowrap; }
+  .cp-table .thin { width: 1%; white-space: nowrap; }
+  .cp-table a, .cp-link { color: #2563d4; text-decoration: none; }
+  .cp-table code { font-size: 16px; }
+  .cp-status { display: inline-flex; align-items: center; gap: 8px; font-size: 16px; font-weight: 500; border-radius: 999px; padding: 3px 12px 3px 10px; white-space: nowrap; }
+  .cp-status::before { content: ''; width: 9px; height: 9px; border-radius: 50%; background: currentColor; }
+  .cp-status.green { color: #136e4f; background: #e3f5ec; }
+  .cp-status.orange { color: #9a5b00; background: #fdf0d8; }
+  .cp-row-hl td { background: #fff8eb; }
+
+  /* inventory panes (slide 3) */
+  .inv .cp-pane { padding: 12px 22px 6px; }
+  .inv .cp-pane + .cp-pane { margin-top: 10px; }
+  .inv h4 { font-size: 18px; margin-bottom: 2px; }
+  .inv .cp-table td { padding: 7px 0; font-size: 17px; }
+  .inv .cp-table td + td { padding-left: 22px; }
+  .inv .lbl b { color: #1f2933; font-weight: 600; }
+  .inv .lbl .ao { font-size: 14px; color: #6b7783; }
+  .inv .lbl .pv { display: block; font-size: 14px; color: #6b7783; margin-top: 1px; }
+  .inv .basis, .inv .tx { font-size: 15px; color: #6b7783; }
+  .inv .cp-table td.basis { width: 170px; }
+  .inv .cp-table td.tx { width: 64px; }
+  .inv .tx.out { color: #33404c; font-weight: 600; }
+  .inv .btns { display: flex; gap: 6px; justify-content: flex-end; width: 150px; }
+
+  /* CP notes (slide 5) */
+  .cp-note { border-radius: 6px; padding: 16px 20px; font-size: 18px; line-height: 1.5; color: #33404c; }
+  .cp-note.warning { background: #fff7e6; border-left: 4px solid #f2a60d; }
+  .cp-note ul { margin: 10px 0 12px 22px; }
+  .cp-note li { margin: 4px 0; }
+  .cp-note code { font-size: 16px; background: rgba(0,0,0,0.05); padding: 1px 6px; border-radius: 4px; }
+
+  /* detector (slide 6) */
+  .det-row { padding: 12px 0; border-bottom: 1px solid #e4e7eb; }
+  .det-row:last-of-type { border-bottom: 0; }
+  .det-row label { display: flex; align-items: center; gap: 10px; font-size: 19px; }
+  .det-row label b { color: #1f2933; }
+  .det-row .box { width: 18px; height: 18px; border-radius: 4px; background: #2563d4; position: relative; flex: 0 0 auto; }
+  .det-row .box::after { content: ''; position: absolute; left: 6px; top: 2px; width: 5px; height: 10px; border: solid #fff; border-width: 0 2.5px 2.5px 0; transform: rotate(45deg); }
+  .det-row ul { list-style: disc inside; margin: 6px 0 0 30px; font-size: 15px; color: #6b7783; }
+  .det-row li { margin: 3px 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 940px; }
+  .det-row li code { font-size: 15px; color: #33404c; background: #eef1f4; padding: 1px 5px; border-radius: 4px; }
+  .det-row li .x { opacity: 0.75; font-family: 'JetBrains Mono', ui-monospace, Menlo, monospace; font-size: 13.5px; }
+
+  /* audit (slide 7) */
+  .counts { display: flex; gap: 56px; }
+  .counts b { display: block; font-size: 38px; font-weight: 600; line-height: 1.1; }
+  .counts span { font-size: 15px; color: #6b7783; }
+  .finding { border-left: 4px solid; padding: 13px 20px !important; }
+  .finding h5 { font-size: 19px; font-weight: 700; color: #1f2933; margin-bottom: 4px; }
+  .finding p { font-size: 15.5px !important; line-height: 1.45 !important; color: #3f4d5a; }
+  .finding p + p { margin-top: 5px; }
+  .finding p.cite { font-size: 14px !important; color: #6b7783; margin-top: 4px; }
+  .finding.critical { border-color: #cf1124; }
+  .finding.warning { border-color: #f0b429; }
+  .finding.notice { border-color: #8c95a3; }
+  .cpframe .body .finding + .finding, .cpframe .body .cp-pane.finding { margin-top: 9px; }
+
+  /* ---- diagram (slide 2) ----------------------------------------------- */
+  .diagram { position: absolute; right: 90px; top: 50%; transform: translateY(-50%); z-index: 3; width: 1140px; }
+  .flow { display: grid; grid-template-columns: 360px 70px 236px 70px 340px; align-items: center; }
+  .ins { display: flex; flex-direction: column; gap: 18px; }
+  .card { height: 150px; border-radius: 14px; border: 1px solid rgba(159,180,230,0.28); background: rgba(20,26,46,0.85); padding: 18px 22px; }
+  .card .k { font-size: 15px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: var(--accent-light); }
+  .card .q { font-size: 23px; font-weight: 600; color: var(--off-white); margin: 4px 0 10px; }
+  .card .chips { display: flex; flex-wrap: wrap; gap: 7px; }
+  .card .chips span { font-size: 15px; color: rgba(240,240,245,0.78); background: rgba(159,180,230,0.10); border: 1px solid rgba(159,180,230,0.22); border-radius: 6px; padding: 3px 9px; }
+  .card .chips code { font-size: 14px; color: var(--accent-light); background: rgba(159,180,230,0.08); border-radius: 5px; padding: 3px 7px; }
+  .arrows { height: 100%; display: flex; align-items: center; justify-content: center; }
+  .compiler { border-radius: 18px; border: 2px solid var(--gold); background: rgba(255,209,102,0.07); padding: 30px 24px; text-align: center; box-shadow: 0 0 60px rgba(255,209,102,0.10); }
+  .compiler .t { font-family: 'Jersey 20', sans-serif; font-size: 58px; line-height: 1; color: var(--gold); }
+  .compiler .s { font-size: 18px; line-height: 1.4; color: rgba(240,240,245,0.7); margin-top: 10px; }
+  .outs { display: flex; flex-direction: column; gap: 12px; }
+  .doc { display: flex; align-items: center; gap: 14px; border-radius: 12px; background: #f7f8fb; color: #1f2933; padding: 13px 18px; box-shadow: 0 14px 30px rgba(0,0,0,0.4); }
+  .doc svg { flex: 0 0 auto; }
+  .doc b { display: block; font-size: 19px; font-weight: 700; }
+  .doc small { display: block; font-family: 'JetBrains Mono', ui-monospace, Menlo, monospace; font-size: 15px; color: #2E4374; margin-top: 2px; }
+  .pubstrip { margin-top: 34px; display: grid; grid-template-columns: 1fr 34px 1fr 34px 1fr; align-items: stretch; }
+  .pubstrip .st { border-radius: 12px; border: 1px solid rgba(255,255,255,0.10); background: rgba(15,15,26,0.75); padding: 15px 18px; }
+  .pubstrip .st b { display: block; font-size: 19px; color: var(--off-white); margin-bottom: 3px; }
+  .pubstrip .st span { font-size: 16px; line-height: 1.4; color: rgba(240,240,245,0.62); }
+  .pubstrip .st.pub { border-color: rgba(255,209,102,0.45); }
+  .pubstrip .st.pub b { color: var(--gold); }
+  .pubstrip .ar { display: flex; align-items: center; justify-content: center; color: var(--accent-light); font-size: 26px; }
+
+  /* ---- rendered document (slide 4) -------------------------------------- */
+  .papers { position: absolute; right: 90px; top: 50%; transform: translateY(-50%); z-index: 3; width: 1160px; display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+  .paper { border-radius: 14px; overflow: hidden; background: #fdfcf9; color: #1f2430; box-shadow: 0 40px 90px rgba(0,0,0,0.55), 0 6px 18px rgba(0,0,0,0.35); }
+  .paper .url { display: flex; align-items: center; gap: 10px; padding: 11px 18px; background: #e9ecf2; font-family: 'JetBrains Mono', ui-monospace, Menlo, monospace; font-size: 15px; color: #4a5568; }
+  .paper .url .lang { margin-left: auto; font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 700; letter-spacing: 0.12em; color: #fff; background: #2E4374; border-radius: 4px; padding: 2px 8px; }
+  .paper .pg { padding: 22px 28px 24px; font-family: Georgia, 'Times New Roman', serif; }
+  .paper h3 { font-family: 'Inter', sans-serif; font-size: 22px; font-weight: 700; color: #1f2430; margin-bottom: 6px; }
+  .paper h4 { font-family: 'Inter', sans-serif; font-size: 16px; font-weight: 600; letter-spacing: 0.02em; color: #5a6475; margin: 12px 0 2px; }
+  .paper h5 { font-family: 'Inter', sans-serif; font-size: 19px; font-weight: 700; color: #1f2430; margin: 4px 0 8px; }
+  .paper p { font-size: 16.5px; line-height: 1.5; margin-bottom: 8px; }
+  .paper p.dim { color: #6b7280; font-size: 15px; }
+  .paper .f { background: rgba(46,67,116,0.10); box-shadow: inset 0 -2px 0 rgba(46,67,116,0.55); border-radius: 2px; padding: 0 2px; }
+  .paper a { color: #2E4374; }
+  .legend { position: absolute; left: 0; bottom: -54px; display: flex; gap: 28px; font-size: 18px; color: rgba(240,240,245,0.6); }
+  .legend i { display: inline-block; width: 26px; height: 14px; border-radius: 3px; margin-right: 10px; vertical-align: -1px; }
+  .legend i.f { background: rgba(159,180,230,0.30); box-shadow: inset 0 -3px 0 var(--accent-light); }
+  .legend i.t { background: #fdfcf9; }
+
+  /* ---- closing: editions (slide 8) ------------------------------------- */
+  .closing .inner { flex-direction: column; align-items: flex-start; justify-content: center; padding-bottom: 150px; }
+  .closing h2 { font-size: 100px; margin-bottom: 20px; }
+  .closing .lede { font-size: 30px; max-width: 1500px; margin-bottom: 44px; }
+  .closing .cols { display: grid; grid-template-columns: 1fr 1.25fr; gap: 40px; width: 1660px; }
+  .closing .col { border-radius: 16px; border: 1px solid rgba(255,255,255,0.09); background: rgba(37,37,64,0.42); padding: 34px 38px; }
+  .closing .col.pro { border-color: rgba(159,180,230,0.45); background: rgba(46,67,116,0.30); }
+  .closing .col h3 { display: flex; align-items: baseline; gap: 16px; font-family: 'Jersey 20', sans-serif; font-weight: 400; font-size: 60px; line-height: 1; margin-bottom: 20px; }
+  .closing .col h3 small { font-family: 'Inter', sans-serif; font-size: 22px; font-weight: 600; letter-spacing: 0.04em; color: rgba(240,240,245,0.55); }
+  .closing .col.pro h3 small { color: var(--accent-light); }
+  .closing .col ul { list-style: none; display: flex; flex-direction: column; gap: 13px; }
+  .closing .col li { display: flex; gap: 14px; font-size: 24px; line-height: 1.4; color: rgba(240,240,245,0.74); }
+  .closing .col li svg { flex: 0 0 auto; margin-top: 5px; }
+  .closing .col li code { font-size: 21px; color: var(--accent-light); }
+  .closing .note { margin-top: 30px; display: flex; align-items: center; gap: 16px; font-size: 24px; color: rgba(240,240,245,0.7); }
+  .closing .note b { color: var(--gold); font-weight: 600; }
+
+  /* ---- footer lockup --------------------------------------------------- */
+  .footer {
+    position: absolute;
+    left: 130px;
+    bottom: 54px;
+    z-index: 4;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    font-size: 22px;
+    color: rgba(240, 240, 245, 0.42);
+  }
+  .footer img { width: 40px; height: 40px; border-radius: 9px; }
+  .footer b { color: rgba(240, 240, 245, 0.72); font-weight: 600; }
+
+  /* Only render the requested slide when screenshotting */
+  body.single .slide { display: none; }
+  body.single .slide.active { display: block; }
+</style>
+</head>
+<body>
+
+<!-- 1 · Cover ============================================================ -->
+<section class="slide cover" data-n="1">
+  <div class="inner">
+    <div class="copy">
+      <div class="eyebrow"><span class="rule"></span> Craft CMS 5</div>
+      <h1 class="gradient-text">Jack</h1>
+      <p class="tagline">Legal texts for Craft CMS — generated from the facts about your site.</p>
+      <p class="lede">Imprint, privacy policy, cookies and terms, in German and English. Answer who you are and what you use; the documents follow.</p>
+      <div class="badges">
+        <span class="badge price">Free · Pro $99</span>
+        <span class="badge">Craft 5.3+ · PHP 8.2+</span>
+      </div>
+    </div>
+    <div class="mark"><img src="assets/icon.svg" alt=""></div>
+  </div>
+  <div class="footer"><img src="assets/icon.svg" alt=""> <b>Jack</b> &nbsp;·&nbsp; justinholt.com/plugins/craft-jack</div>
+</section>
+
+<!-- 2 · A document is a projection ======================================== -->
+<section class="slide feature" data-n="2">
+  <div class="inner">
+    <div class="copy" style="width: 520px;">
+      <div class="eyebrow"><span class="rule"></span> How it works</div>
+      <h2 style="font-size: 88px;">A document is<br>a projection</h2>
+      <p class="lede" style="font-size: 30px;">Nobody writes a privacy policy. The compiler is a pure function: same facts, same bytes.</p>
+      <ul class="points">
+        <li><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#9FB4E6" stroke-width="3"><path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round"/></svg> <span>The imprint and the privacy policy cannot disagree about the address</span></li>
+        <li><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#9FB4E6" stroke-width="3"><path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round"/></svg> <span>Clause bodies are not Twig, so editors can’t run code in a legal text</span></li>
+      </ul>
+    </div>
+  </div>
+  <div class="diagram">
+    <div class="flow">
+      <div class="ins">
+        <div class="card">
+          <div class="k">Profile</div>
+          <div class="q">Who you are</div>
+          <div class="chips"><code>company.name</code><code>company.vatId</code><code>hosting.provider</code><code>dpo.name</code></div>
+        </div>
+        <div class="card">
+          <div class="k">Inventory</div>
+          <div class="q">What you use</div>
+          <div class="chips"><span>Stripe</span><span>Mailchimp</span><span>Google Fonts</span><span>Google Analytics 4</span></div>
+        </div>
+        <div class="card">
+          <div class="k">Library</div>
+          <div class="q">What the law says</div>
+          <div class="chips"><span>DE + EN clauses</span><span>Processor registry</span><span>reviewed 2026-10-03</span></div>
+        </div>
+      </div>
+      <div class="arrows">
+        <svg width="70" height="486" viewBox="0 0 70 486" style="display:block" fill="none" stroke="#9FB4E6" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 75 C40 75 40 243 64 243 M4 243 H64 M4 411 C40 411 40 243 64 243"/><path d="M56 235 L64 243 L56 251"/></svg>
+      </div>
+      <div class="compiler">
+        <div class="t">Compiler</div>
+        <div class="s">a pure function of<br>the three inputs</div>
+      </div>
+      <div class="arrows">
+        <svg width="70" height="340" viewBox="0 0 70 340" fill="none" stroke="#ffd166" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 170 C34 170 34 38 62 38 M6 170 C34 170 34 126 62 126 M6 170 C34 170 34 214 62 214 M6 170 C34 170 34 302 62 302"/></svg>
+      </div>
+      <div class="outs">
+        <div class="doc"><svg width="26" height="30" viewBox="0 0 26 30"><path d="M2 2h15l7 7v19H2z" fill="#2E4374"/><path d="M6 13h14M6 18h14M6 23h9" stroke="#fff" stroke-width="2"/></svg><div><b>Imprint / legal notice</b><small>/impressum</small></div></div>
+        <div class="doc"><svg width="26" height="30" viewBox="0 0 26 30"><path d="M2 2h15l7 7v19H2z" fill="#2E4374"/><path d="M6 13h14M6 18h14M6 23h9" stroke="#fff" stroke-width="2"/></svg><div><b>Privacy policy</b><small>/datenschutz</small></div></div>
+        <div class="doc"><svg width="26" height="30" viewBox="0 0 26 30"><path d="M2 2h15l7 7v19H2z" fill="#2E4374"/><path d="M6 13h14M6 18h14M6 23h9" stroke="#fff" stroke-width="2"/></svg><div><b>Cookie policy</b><small>/cookies</small></div></div>
+        <div class="doc"><svg width="26" height="30" viewBox="0 0 26 30"><path d="M2 2h15l7 7v19H2z" fill="#2E4374"/><path d="M6 13h14M6 18h14M6 23h9" stroke="#fff" stroke-width="2"/></svg><div><b>Terms and conditions</b><small>/agb</small></div></div>
+      </div>
+    </div>
+    <div class="pubstrip">
+      <div class="st"><b>Recompile</b><span>Cheap and automatic when the profile or inventory changes</span></div>
+      <div class="ar">→</div>
+      <div class="st pub"><b>Publish</b><span>Deliberate. Writes an immutable version somebody signs off</span></div>
+      <div class="ar">→</div>
+      <div class="st"><b>Visitors</b><span>See the published text only. Never a half-typed address</span></div>
+    </div>
+  </div>
+  <div class="footer"><img src="assets/icon.svg" alt=""> <b>Jack</b> &nbsp;·&nbsp; justinholt.com/plugins/craft-jack</div>
+</section>
+
+<!-- 3 · The inventory ===================================================== -->
+<section class="slide feature" data-n="3">
+  <div class="inner">
+    <div class="copy" style="width: 580px;">
+      <div class="eyebrow"><span class="rule"></span> The inventory</div>
+      <h2 style="font-size: 86px;">This list is<br>the privacy policy</h2>
+      <p class="lede" style="max-width: 560px; font-size: 30px;">Add Stripe here and the Stripe paragraph appears in every language you publish in.</p>
+      <ul class="points">
+        <li><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#9FB4E6" stroke-width="3"><path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round"/></svg> <span>Provider, address, legal basis and transfer wording come with it</span></li>
+        <li><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#9FB4E6" stroke-width="3"><path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round"/></svg> <span>Server logs and session cookies are always on, and can’t be removed</span></li>
+        <li><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#9FB4E6" stroke-width="3"><path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round"/></svg> <span>Readable from Twig, so a consent banner can’t disagree with the policy</span></li>
+      </ul>
+    </div>
+  </div>
+  <div class="cpframe inv" style="width: 1020px;">
+    <div class="chrome"><b></b><b></b><b></b><em>Jack → Inventory</em></div>
+    <div class="body">
+      <div class="cp-title"><h3>Inventory</h3><span class="cp-btn">Find undeclared services</span></div>
+      <div class="cp-pane">
+        <h4>Site functions</h4>
+        <table class="cp-table"><tbody>
+          <tr><td class="lbl"><b>Session and security cookies</b> <span class="ao">— always on</span></td><td class="thin basis">Legitimate interest</td><td class="thin tx">EEA</td><td class="thin"><div class="btns"><span class="cp-btn small">Edit</span></div></td></tr>
+          <tr><td class="lbl"><b>Server log files</b> <span class="ao">— always on</span></td><td class="thin basis">Legitimate interest</td><td class="thin tx">EEA</td><td class="thin"><div class="btns"><span class="cp-btn small">Edit</span></div></td></tr>
+          <tr><td class="lbl"><b>Contact and enquiry forms</b></td><td class="thin basis">Contract</td><td class="thin tx">EEA</td><td class="thin"><div class="btns"><span class="cp-btn small">Edit</span><span class="cp-btn small">Remove</span></div></td></tr>
+        </tbody></table>
+      </div>
+      <div class="cp-pane">
+        <h4>Payments</h4>
+        <table class="cp-table"><tbody>
+          <tr><td class="lbl"><b>Stripe</b><span class="pv">Stripe Payments Europe Ltd.</span></td><td class="thin basis">Contract</td><td class="thin tx out">DPF</td><td class="thin"><div class="btns"><span class="cp-btn small">Edit</span><span class="cp-btn small">Remove</span></div></td></tr>
+        </tbody></table>
+      </div>
+      <div class="cp-pane">
+        <h4>Email and newsletters</h4>
+        <table class="cp-table"><tbody>
+          <tr><td class="lbl"><b>Mailchimp</b><span class="pv">Intuit Inc.</span></td><td class="thin basis">Consent</td><td class="thin tx out">DPF</td><td class="thin"><div class="btns"><span class="cp-btn small">Edit</span><span class="cp-btn small">Remove</span></div></td></tr>
+        </tbody></table>
+      </div>
+      <div class="cp-pane">
+        <h4>Fonts and icons</h4>
+        <table class="cp-table"><tbody>
+          <tr><td class="lbl"><b>Google Fonts</b><span class="pv">Google Ireland Limited</span></td><td class="thin basis">Consent</td><td class="thin tx out">DPF</td><td class="thin"><div class="btns"><span class="cp-btn small">Edit</span><span class="cp-btn small">Remove</span></div></td></tr>
+        </tbody></table>
+      </div>
+      <div class="cp-pane">
+        <h4>Analytics</h4>
+        <table class="cp-table"><tbody>
+          <tr><td class="lbl"><b>Google Analytics 4</b><span class="pv">Google Ireland Limited</span></td><td class="thin basis">Consent</td><td class="thin tx out">DPF</td><td class="thin"><div class="btns"><span class="cp-btn small">Edit</span><span class="cp-btn small">Remove</span></div></td></tr>
+        </tbody></table>
+      </div>
+    </div>
+  </div>
+  <div class="footer"><img src="assets/icon.svg" alt=""> <b>Jack</b> &nbsp;·&nbsp; justinholt.com/plugins/craft-jack</div>
+</section>
+
+<!-- 4 · One template, every service ====================================== -->
+<section class="slide feature" data-n="4">
+  <div class="inner">
+    <div class="copy" style="width: 500px;">
+      <div class="eyebrow"><span class="rule"></span> Deutsch · English</div>
+      <h2 style="font-size: 88px;">A processor<br>is data,<br>not prose</h2>
+      <p class="lede" style="font-size: 28px;">One paragraph per legal basis and transfer mechanism. Mailchimp only supplies the facts.</p>
+      <ul class="points">
+        <li><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#9FB4E6" stroke-width="3"><path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round"/></svg> <span>Every service reads in the same voice</span></li>
+        <li><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#9FB4E6" stroke-width="3"><path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round"/></svg> <span>A provider moves; one file changes; <code>composer update</code></span></li>
+      </ul>
+    </div>
+  </div>
+  <div class="papers">
+    <div class="paper">
+      <div class="url">/datenschutz <span class="lang">DE</span></div>
+      <div class="pg">
+        <h3>Dienste und Empfänger</h3>
+        <h4>E-Mail und Newsletter</h4>
+        <h5>Mailchimp</h5>
+        <p>Diese Website nutzt <span class="f">Mailchimp</span> für <span class="f">den Versand unseres Newsletters und dessen Auswertung</span>.</p>
+        <p>Anbieter ist <span class="f">Intuit Inc.</span>, <span class="f">2700 Coast Avenue, Mountain View, CA 94043, USA</span>.</p>
+        <p>Dabei werden die folgenden Daten verarbeitet: <span class="f">E-Mail-Adresse, Name sofern angegeben, Anmeldezeitpunkt und IP-Adresse, Öffnungs- und Klickverhalten</span>.</p>
+        <p>Rechtsgrundlage ist Ihre Einwilligung nach Art. 6 Abs. 1 lit. a DSGVO und § 25 Abs. 1 TDDDG. Sie können sie jederzeit mit Wirkung für die Zukunft widerrufen.</p>
+        <p>Die Verarbeitung findet auch in den USA statt. Der Anbieter ist unter dem EU-US Data Privacy Framework zertifiziert; die Übermittlung stützt sich auf den Angemessenheitsbeschluss der Europäischen Kommission vom 10. Juli 2023 nach Art. 45 DSGVO.</p>
+        <p class="dim" style="margin-bottom: 0;">Datenschutzerklärung des Anbieters: <a><span class="f">https://www.intuit.com/privacy/statement/</span></a>.</p>
+      </div>
+    </div>
+    <div class="paper">
+      <div class="url">/en/privacy <span class="lang">EN</span></div>
+      <div class="pg">
+        <h3>Services and recipients</h3>
+        <h4>Email and newsletters</h4>
+        <h5>Mailchimp</h5>
+        <p>This website uses <span class="f">Mailchimp</span> for <span class="f">sending our newsletter and measuring how it performs</span>.</p>
+        <p>The provider is <span class="f">Intuit Inc.</span>, <span class="f">2700 Coast Avenue, Mountain View, CA 94043, USA</span>.</p>
+        <p>The following data is processed: <span class="f">email address, name if given, sign-up time and IP address, opens and clicks</span>.</p>
+        <p>The legal basis is your consent under Art. 6 (1) (a) GDPR and § 25 (1) TDDDG. You may withdraw it at any time with effect for the future.</p>
+        <p>Processing also takes place in the United States. The provider is certified under the EU–US Data Privacy Framework, and the transfer relies on the European Commission’s adequacy decision of 10 July 2023 under Art. 45 GDPR.</p>
+        <p class="dim" style="margin-bottom: 0;">Provider’s privacy policy: <a><span class="f">https://www.intuit.com/privacy/statement/</span></a>.</p>
+      </div>
+    </div>
+    <div class="legend"><span><i class="f"></i>from the processor registry</span><span><i class="t"></i>sentence templates, written once</span></div>
+  </div>
+  <div class="footer"><img src="assets/icon.svg" alt=""> <b>Jack</b> &nbsp;·&nbsp; justinholt.com/plugins/craft-jack</div>
+</section>
+
+<!-- 5 · Drift =========================================================== -->
+<section class="slide feature" data-n="5">
+  <div class="inner">
+    <div class="copy" style="width: 560px;">
+      <div class="eyebrow"><span class="rule"></span> Drift <span class="pro">Pro</span></div>
+      <h2 style="font-size: 80px;">Out of date,<br>and here is<br>which paragraph</h2>
+      <p class="lede" style="max-width: 540px; font-size: 28px;">The EU’s dispute platform shut down on 20 July 2025. One clause changed; Jack knows which imprint still says the old thing.</p>
+      <ul class="points">
+        <li><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#9FB4E6" stroke-width="3"><path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round"/></svg> <span>Lite marks it out of date; Pro names the paragraph</span></li>
+        <li><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#9FB4E6" stroke-width="3"><path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round"/></svg> <span>The same check catches a new service or a changed address</span></li>
+        <li><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#9FB4E6" stroke-width="3"><path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round"/></svg> <span><code>jack/documents/check</code> fails the build over it</span></li>
+      </ul>
+    </div>
+  </div>
+  <div class="cpframe" style="width: 1060px;">
+    <div class="chrome"><b></b><b></b><b></b><em>Jack → Documents</em></div>
+    <div class="body">
+      <div class="cp-title"><h3>Legal documents</h3><span class="cp-btn submit">+ New document</span></div>
+      <div class="cp-pane" style="padding: 8px 10px;">
+        <table class="cp-table">
+          <thead><tr><th>Title</th><th>Type</th><th>URI</th><th>State</th><th>Compiled</th></tr></thead>
+          <tbody>
+            <tr><td><a>Datenschutzerklärung</a></td><td>Privacy policy</td><td class="cp-light">datenschutz</td><td><span class="cp-status green">Current</span></td><td class="cp-light nowrap">10/3/26, 9:14 AM</td></tr>
+            <tr class="cp-row-hl"><td><a>Impressum</a></td><td>Imprint / legal notice</td><td class="cp-light">impressum</td><td><span class="cp-status orange">Out of date</span></td><td class="cp-light nowrap">7/14/25, 4:02 PM</td></tr>
+            <tr><td><a>Cookie-Richtlinie</a></td><td>Cookie policy</td><td class="cp-light">cookies</td><td><span class="cp-status green">Current</span></td><td class="cp-light nowrap">10/3/26, 9:14 AM</td></tr>
+            <tr><td><a>AGB</a></td><td>Terms and conditions</td><td class="cp-light">agb</td><td><span class="cp-status green">Current</span></td><td class="cp-light nowrap">10/3/26, 9:14 AM</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="cp-title" style="margin-top: 22px;"><h3>Impressum</h3><span class="cp-btn">Save</span></div>
+      <div class="cp-pane" style="padding: 18px;">
+        <div class="cp-note warning">
+          <p><b>Out of date.</b> What this document says and what it would say if compiled now have parted company.</p>
+          <ul>
+            <li>Changed: <code>imprint.dispute</code> — Verbraucherstreitbeilegung</li>
+          </ul>
+          <span class="cp-btn" style="background: #fff; box-shadow: 0 0 0 1px #cdd8e4;">Recompile now</span>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="footer"><img src="assets/icon.svg" alt=""> <b>Jack</b> &nbsp;·&nbsp; justinholt.com/plugins/craft-jack</div>
+</section>
+
+<!-- 6 · The detector (Pro) ================================================ -->
+<section class="slide feature" data-n="6">
+  <div class="inner">
+    <div class="copy" style="width: 560px;">
+      <div class="eyebrow"><span class="rule"></span> Detector <span class="pro">Pro</span></div>
+      <h2 style="font-size: 92px;">Somebody<br>embedded<br>a video</h2>
+      <p class="lede" style="max-width: 540px; font-size: 28px;">Jack reads your templates, plugins and environment, and shows the file and line.</p>
+      <ul class="points">
+        <li><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#9FB4E6" stroke-width="3"><path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round"/></svg> <span>An environment variable is reported as <code>set</code> — never its value</span></li>
+        <li><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#9FB4E6" stroke-width="3"><path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round"/></svg> <span><code>jack/inventory/detect</code> fails CI on an undeclared service</span></li>
+      </ul>
+    </div>
+  </div>
+  <div class="cpframe" style="width: 1080px;">
+    <div class="chrome"><b></b><b></b><b></b><em>Jack → Inventory → Undeclared services</em></div>
+    <div class="body">
+      <div class="cp-title"><h3>Undeclared services</h3></div>
+      <p class="cp-intro">Jack read your templates, your installed plugins and your environment. Everything below is on the site; the ones flagged are not in your privacy policy.</p>
+      <div class="cp-pane" style="padding: 18px 24px;">
+        <h4 style="margin-bottom: 2px;">3 services are not declared</h4>
+        <div class="det-row">
+          <label><span class="box"></span><b>YouTube</b> <span class="cp-light cp-small">media</span></label>
+          <ul>
+            <li><code>templates/_components/video.twig:3</code><span class="x"> — s="video"&gt; &lt;iframe src="https://www.youtube.com/embed/{{ id }}" title="{{ block.caption }}</span></li>
+            <li><code>templates/about.twig:42</code><span class="x"> — dth="560" height="315" src="https://www.youtube-nocookie.com/embed/8YxqM2kTq0E" title="Our</span></li>
+          </ul>
+        </div>
+        <div class="det-row">
+          <label><span class="box"></span><b>Google Tag Manager</b> <span class="cp-light cp-small">analytics</span></label>
+          <ul>
+            <li><code>templates/_layouts/base.twig:13</code><span class="x"> — '';j.async=true;j.src= 'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.ins</span></li>
+          </ul>
+        </div>
+        <div class="det-row">
+          <label><span class="box"></span><b>Sentry</b> <span class="cp-light cp-small">infrastructure</span></label>
+          <ul>
+            <li><code>SENTRY_DSN</code><span class="x"> — set</span></li>
+          </ul>
+        </div>
+        <div style="margin-top: 14px;"><span class="cp-btn submit">Add the ticked services</span></div>
+      </div>
+      <div class="cp-pane" style="padding: 16px 24px;">
+        <h4 style="margin-bottom: 6px;">Found and already declared</h4>
+        <ul style="margin-left: 22px; font-size: 17px; line-height: 1.6;">
+          <li>Stripe <span class="cp-light cp-small">— 2 places</span></li>
+          <li>Google Fonts <span class="cp-light cp-small">— 1 place</span></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+  <div class="footer"><img src="assets/icon.svg" alt=""> <b>Jack</b> &nbsp;·&nbsp; justinholt.com/plugins/craft-jack</div>
+</section>
+
+<!-- 7 · Audit ============================================================= -->
+<section class="slide feature" data-n="7">
+  <div class="inner">
+    <div class="copy" style="width: 540px;">
+      <div class="eyebrow"><span class="rule"></span> Audit</div>
+      <h2 style="font-size: 92px;">Worst first,<br>each with<br>a remedy</h2>
+      <p class="lede" style="max-width: 520px; font-size: 28px;">The expensive failures are absences, and absences never appear on a screen that lists what you have.</p>
+      <ul class="points">
+        <li><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#9FB4E6" stroke-width="3"><path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round"/></svg> <span>A missing imprint, an empty document, a host without a DPA</span></li>
+        <li><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#9FB4E6" stroke-width="3"><path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round"/></svg> <span>Google Fonts, warned about by court and case number</span></li>
+      </ul>
+    </div>
+  </div>
+  <div class="cpframe" style="width: 1100px;">
+    <div class="chrome"><b></b><b></b><b></b><em>Jack → Audit</em></div>
+    <div class="body">
+      <div class="cp-title"><h3>Audit</h3></div>
+      <div class="cp-pane" style="padding: 14px 24px;">
+        <div class="counts">
+          <div><b style="color: #cf1124;">1</b><span>critical</span></div>
+          <div><b style="color: #f0b429;">2</b><span>to fix</span></div>
+          <div><b style="color: #8c95a3;">1</b><span>worth knowing</span></div>
+        </div>
+      </div>
+      <div class="cp-pane finding critical">
+        <h5>3 services are on the site but not in the privacy policy</h5>
+        <p>Found in your templates, plugins or environment but never declared: YouTube, Google Tag Manager, Sentry.</p>
+        <p><b>Fix:</b> Add them to the inventory — or take them off the site.</p>
+        <p class="cite">Art. 13 DSGVO</p>
+      </div>
+      <div class="cp-pane finding warning">
+        <h5>Google Fonts is loaded from Google</h5>
+        <p>Munich Regional Court I awarded damages against a site for embedding Google Fonts dynamically without consent (20 January 2022, 3 O 17493/20), and a cottage industry of warning letters followed.</p>
+        <p><b>Fix:</b> Download the fonts and serve them from your own domain, then remove the entry from the inventory.</p>
+      </div>
+      <div class="cp-pane finding warning">
+        <h5>“Impressum” is out of date</h5>
+        <p>What this document says and what it would say if compiled now have parted company — the library, the profile or the inventory has moved since.</p>
+        <p><b>Fix:</b> Review the differences and recompile.</p>
+      </div>
+      <div class="cp-pane finding notice">
+        <h5>3 services need consent before they load</h5>
+        <p>Jack has written the clauses that say you ask for consent: Mailchimp, Google Fonts, Google Analytics 4. It does not itself hold the consent back — that is a consent banner’s job, and Jack is not one.</p>
+        <p class="cite">§ 25 Abs. 1 TDDDG</p>
+      </div>
+    </div>
+  </div>
+  <div class="footer"><img src="assets/icon.svg" alt=""> <b>Jack</b> &nbsp;·&nbsp; justinholt.com/plugins/craft-jack</div>
+</section>
+
+<!-- 8 · Editions ========================================================= -->
+<section class="slide closing" data-n="8">
+  <div class="inner">
+    <div class="eyebrow"><span class="rule"></span> Two editions</div>
+    <h2>Lite is what German law requires</h2>
+    <p class="lede">An imprint and a privacy policy, from the whole clause library and the whole processor registry. Pro adds every other document, every language, and the detector.</p>
+    <div class="cols">
+      <div class="col">
+        <h3>Lite <small>Free</small></h3>
+        <ul>
+          <li><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#9FB4E6" stroke-width="3"><path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round"/></svg> <span>Imprint and privacy policy, in one language</span></li>
+          <li><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#9FB4E6" stroke-width="3"><path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round"/></svg> <span>The whole clause library and processor registry</span></li>
+          <li><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#9FB4E6" stroke-width="3"><path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round"/></svg> <span>Told when a document goes out of date</span></li>
+          <li><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#9FB4E6" stroke-width="3"><path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round"/></svg> <span>The audit, and <code>craft.jack.*</code> in Twig</span></li>
+        </ul>
+      </div>
+      <div class="col pro">
+        <h3>Pro <small>$99 · then $79/yr</small></h3>
+        <ul>
+          <li><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#9FB4E6" stroke-width="3"><path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round"/></svg> <span>Cookie policy, terms, withdrawal, disclaimer, accessibility, social</span></li>
+          <li><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#9FB4E6" stroke-width="3"><path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round"/></svg> <span>Every site and every language</span></li>
+          <li><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#9FB4E6" stroke-width="3"><path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round"/></svg> <span>Rewriting a clause, adding your own sections</span></li>
+          <li><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#9FB4E6" stroke-width="3"><path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round"/></svg> <span>Finding undeclared services</span></li>
+          <li><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#9FB4E6" stroke-width="3"><path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round"/></svg> <span>Version history and diffs</span></li>
+          <li><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#9FB4E6" stroke-width="3"><path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round"/></svg> <span>Console commands and the CI check</span></li>
+        </ul>
+      </div>
+    </div>
+    <p class="note"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ffd166" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 3v6c0 4.5-3.4 8-8 9-4.6-1-8-4.5-8-9V6z"/></svg> <span><b>A lapsed licence never blanks a document.</b> Text compiled under Pro keeps rendering.</span></p>
+  </div>
+  <div class="footer"><img src="assets/icon.svg" alt=""> <b>Jack</b> &nbsp;·&nbsp; justinholt.com/plugins/craft-jack</div>
+</section>
+
+<script>
+  var n = new URLSearchParams(location.search).get('s');
+  if (n) {
+    document.body.classList.add('single');
+    var el = document.querySelector('.slide[data-n="' + n + '"]');
+    if (el) el.classList.add('active');
+  }
+</script>
+</body>
+</html>

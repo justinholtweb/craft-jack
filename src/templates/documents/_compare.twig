@@ -4,39 +4,45 @@
 {% set selectedSubnavItem = 'documents' %}
 {% set crumbs = [
     { label: 'Documents'|t('jack'), url: url('jack/documents') },
-    { label: document.title, url: document.getCpEditUrl() },
-    { label: 'History'|t('jack'), url: url('jack/documents/' ~ document.id ~ '/history') },
+    { label: document.title, url: url('jack/documents/' ~ document.id, { siteId: document.siteId }) },
+    { label: 'History'|t('jack'), url: url('jack/documents/' ~ document.id ~ '/history', { siteId: document.siteId }) },
 ] %}
 
 {% block content %}
     <div class="readable">
         <p class="light">
             {{ 'Comparing'|t('jack') }}
-            <strong>{{ from ? from.dateCreated|datetime('short') : 'nothing'|t('jack') }}</strong>
-            →
-            <strong>{{ to ? to.dateCreated|datetime('short') : 'the current text'|t('jack') }}</strong>
+            <strong>{{ from ? from.created|datetime('short') : 'nothing'|t('jack') }}</strong>
+            <span aria-hidden="true">→</span><span class="visually-hidden">{{ 'with'|t('jack') }}</span>
+            <strong>{{ to ? to.created|datetime('short') : 'the current text'|t('jack') }}</strong>
         </p>
     </div>
 
-    <div class="pane jack-diff">
-        {% for row in rows %}
-            {% if row.type == 'added' %}
-                <p class="jack-diff-added"><span class="jack-diff-marker">+</span> {{ row.text }}</p>
-            {% elseif row.type == 'removed' %}
-                <p class="jack-diff-removed"><span class="jack-diff-marker">−</span> {{ row.text }}</p>
-            {% else %}
-                <p class="jack-diff-same"><span class="jack-diff-marker"> </span> {{ row.text }}</p>
-            {% endif %}
-        {% else %}
-            <p class="light">{{ 'No differences.'|t('jack') }}</p>
-        {% endfor %}
-    </div>
+    {% if rows|filter(r => r.type != 'same')|length %}
+        <div class="pane jack-diff">
+            {% for row in rows %}
+                {% if row.type == 'added' %}
+                    <p class="smalltext jack-diff-row jack-diff-added"><span class="jack-diff-marker" aria-hidden="true">+</span><ins><span class="visually-hidden">{{ 'Added:'|t('jack') }} </span>{{ row.text }}</ins></p>
+                {% elseif row.type == 'removed' %}
+                    <p class="smalltext jack-diff-row jack-diff-removed"><span class="jack-diff-marker" aria-hidden="true">−</span><del><span class="visually-hidden">{{ 'Removed:'|t('jack') }} </span>{{ row.text }}</del></p>
+                {% else %}
+                    <p class="smalltext jack-diff-row jack-diff-same"><span class="jack-diff-marker" aria-hidden="true"> </span>{{ row.text }}</p>
+                {% endif %}
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="zilch">
+            <p>{{ 'No differences.'|t('jack') }}</p>
+        </div>
+    {% endif %}
 {% endblock %}
 
 {% css %}
-.jack-diff p { margin: 0; padding: 2px 6px; font-size: 13px; line-height: 1.5; }
-.jack-diff-marker { display: inline-block; width: 1em; color: #8c95a3; font-family: monospace; }
-.jack-diff-added { background: #e8f6ec; }
-.jack-diff-removed { background: #fbeaea; text-decoration: line-through; text-decoration-color: rgba(0,0,0,.25); }
-.jack-diff-same { color: #596673; }
+.jack-diff-row { margin: 0; padding: 2px var(--s); }
+.jack-diff-marker { display: inline-block; inline-size: 1.5em; color: var(--fg-subtle); font-family: monospace; }
+.jack-diff-row ins, .jack-diff-row del { text-decoration: none; }
+.jack-diff-added { background-color: var(--bg-success); }
+.jack-diff-removed { background-color: var(--bg-error); }
+.jack-diff-removed del { text-decoration: line-through; text-decoration-color: var(--fg-subtle); }
+.jack-diff-same { color: var(--fg-subtle); }
 {% endcss %}

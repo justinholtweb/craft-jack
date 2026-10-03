@@ -18,7 +18,7 @@ use justinholtweb\jack\models\Clause;
 class Library extends Component
 {
     /** Date the bundled texts were last reviewed. */
-    public const VERSION = '2026-08-18';
+    public const VERSION = '2026-10-03';
 
     /** @var Clause[]|null */
     private ?array $clauses = null;

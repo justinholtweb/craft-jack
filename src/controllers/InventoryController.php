@@ -7,6 +7,7 @@ use craft\web\Controller;
 use justinholtweb\jack\models\Edition;
 use justinholtweb\jack\models\ServiceEntry;
 use justinholtweb\jack\Plugin;
+use justinholtweb\jack\services\Compiler;
 use yii\web\ForbiddenHttpException;
 use yii\web\NotFoundHttpException;
 use yii\web\Response;
@@ -84,15 +85,23 @@ class InventoryController extends Controller
             throw new NotFoundHttpException('Service not found');
         }
 
+        foreach (['privacyUrl', 'optOutUrl'] as $param) {
+            if ($this->stringParam($param) !== null && $this->webUrl($param) === null) {
+                $this->setFailFlash(Craft::t('jack', 'Links must start with http:// or https://.'));
+
+                return $this->redirect('jack/inventory/' . $serviceKey);
+            }
+        }
+
         $entry->enabled = (bool)$this->request->getBodyParam('enabled', true) || $entry->isAlwaysOn();
         $entry->overrides = array_merge($entry->overrides, [
-            'label' => $this->request->getBodyParam('label'),
-            'provider' => $this->request->getBodyParam('provider'),
-            'providerAddress' => $this->request->getBodyParam('providerAddress'),
-            'privacyUrl' => $this->request->getBodyParam('privacyUrl'),
-            'optOutUrl' => $this->request->getBodyParam('optOutUrl'),
-            'legalBasis' => $this->request->getBodyParam('legalBasis'),
-            'transfer' => $this->request->getBodyParam('transfer'),
+            'label' => $this->stringParam('label'),
+            'provider' => $this->stringParam('provider'),
+            'providerAddress' => $this->stringParam('providerAddress'),
+            'privacyUrl' => $this->webUrl('privacyUrl'),
+            'optOutUrl' => $this->webUrl('optOutUrl'),
+            'legalBasis' => $this->stringParam('legalBasis'),
+            'transfer' => $this->stringParam('transfer'),
             'purpose' => $this->languageMap('purpose'),
             'data' => $this->languageMap('data'),
             'retention' => $this->languageMap('retention'),
@@ -142,10 +151,9 @@ class InventoryController extends Controller
         $removed = Plugin::getInstance()->inventory->delete($serviceKey);
 
         if ($this->request->getAcceptsJson()) {
-            return $this->asJson([
-                'success' => $removed,
-                'message' => $removed ? null : Craft::t('jack', 'That entry can’t be removed — it describes something the site does whether or not it is written down.'),
-            ]);
+            return $removed
+                ? $this->asSuccess(Craft::t('jack', 'Service removed.'))
+                : $this->asFailure(Craft::t('jack', 'That entry can’t be removed — it describes something the site does whether or not it is written down.'));
         }
 
         if (!$removed) {
@@ -207,6 +215,30 @@ class InventoryController extends Controller
      *
      * @return array<string, string>|null
      */
+    /**
+     * A posted text field, trimmed; null when it is empty or not a string.
+     */
+    private function stringParam(string $name): ?string
+    {
+        $value = $this->request->getBodyParam($name);
+
+        if (!is_string($value) || trim($value) === '') {
+            return null;
+        }
+
+        return trim($value);
+    }
+
+    /**
+     * A posted link, kept only if it is an http(s) address: it is printed into an href.
+     */
+    private function webUrl(string $name): ?string
+    {
+        $value = $this->stringParam($name);
+
+        return $value !== null && Compiler::isWebUrl($value) ? $value : null;
+    }
+
     private function languageMap(string $field): ?array
     {
         $values = $this->request->getBodyParam($field, []);
@@ -215,7 +247,10 @@ class InventoryController extends Controller
             return null;
         }
 
-        $map = array_filter(array_map('trim', array_map('strval', $values)), static fn($value) => $value !== '');
+        $map = array_filter(
+            array_map(static fn($value) => is_string($value) ? trim($value) : '', $values),
+            static fn($value) => $value !== '',
+        );
 
         return $map === [] ? null : $map;
     }

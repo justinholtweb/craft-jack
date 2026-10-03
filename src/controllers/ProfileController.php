@@ -6,6 +6,8 @@ use Craft;
 use craft\web\Controller;
 use justinholtweb\jack\models\Edition;
 use justinholtweb\jack\Plugin;
+use justinholtweb\jack\services\Compiler;
+use yii\web\ForbiddenHttpException;
 use yii\web\NotFoundHttpException;
 use yii\web\Response;
 
@@ -52,7 +54,7 @@ class ProfileController extends Controller
             // The override screen shows only what this site has answered differently; the global
             // value sits behind each field as its placeholder, so it is obvious what is being
             // departed from.
-            'values' => $site ? ($override?->facts ?? []) : $global->facts,
+            'values' => $site ? ($override->facts ?? []) : $global->facts,
             'inherited' => $site ? $plugin->profiles->factsForSite(null) : [],
             'completeness' => $plugin->profiles->completeness($site?->id),
             'canEdit' => Craft::$app->getUser()->checkPermission(Plugin::PERMISSION_PROFILE)
@@ -84,12 +86,43 @@ class ProfileController extends Controller
 
         $siteId = $this->request->getBodyParam('siteId');
 
+        if ($siteId) {
+            // Per-site answers are Pro, and changing one site's answers takes Craft's own
+            // permission for that site.
+            if (!Edition::allowsMultiSite($plugin->isPro())) {
+                throw new ForbiddenHttpException(Craft::t('jack', 'Per-site profiles are a Pro feature.'));
+            }
+
+            $site = Craft::$app->getSites()->getSiteById((int)$siteId);
+
+            if (!$site) {
+                throw new NotFoundHttpException('Site not found');
+            }
+
+            $this->requirePermission('editSite:' . $site->uid);
+        }
+
+        // Links that are not http(s) are dropped on save; say which, rather than lose them quietly.
+        $rejected = [];
+
+        foreach ($plugin->library->facts() as $key => $definition) {
+            $value = $facts[$key] ?? null;
+
+            if (($definition['type'] ?? '') === 'url' && is_string($value) && trim($value) !== '' && !Compiler::isWebUrl($value)) {
+                $rejected[] = $definition['label'] ?? $key;
+            }
+        }
+
         $saved = $siteId
             ? $plugin->profiles->saveOverride((int)$siteId, $facts)
             : $plugin->profiles->saveGlobal($facts);
 
         if (!$saved) {
             $this->setFailFlash(Craft::t('jack', 'Couldn’t save the profile.'));
+        } elseif ($rejected !== []) {
+            $this->setFailFlash(Craft::t('jack', 'Profile saved, except these links, which must start with http:// or https://: {fields}', [
+                'fields' => implode(', ', $rejected),
+            ]));
         } else {
             $this->setSuccessFlash(Craft::t('jack', 'Profile saved.'));
         }

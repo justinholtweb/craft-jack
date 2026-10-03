@@ -36,5 +36,4 @@ class DocumentField extends BaseRelationField
     {
         return Craft::t('jack', 'Add a legal document');
     }
-
 }

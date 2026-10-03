@@ -72,9 +72,9 @@ class JackVariable
     public function lastUpdated(string $handleOrType, ?int $siteId = null): ?\DateTime
     {
         $document = $this->document($handleOrType, $siteId);
-        $date = $document?->publishedAt ?: $document?->compiledAt;
+        $date = $document?->publishedAt;
 
-        return $date ? new \DateTime($date) : null;
+        return $date instanceof \DateTime ? $date : null;
     }
 
     /**

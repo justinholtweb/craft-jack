@@ -36,6 +36,10 @@ class Install extends Migration
         $this->dropTableIfExists('{{%jack_services}}');
         $this->dropTableIfExists('{{%jack_profiles}}');
 
+        // The element rows outlive the tables otherwise, and Craft trips over a type it can no
+        // longer load the next time anything lists elements.
+        $this->delete(Table::ELEMENTS, ['type' => 'justinholtweb\\jack\\elements\\Document']);
+
         return true;
     }
 
@@ -57,6 +61,8 @@ class Install extends Migration
             'documentId' => $this->integer()->notNull(),
             'siteId' => $this->integer()->notNull(),
             'compiledHtml' => $this->mediumText(),
+            // What visitors see. Set only by publishing, so a recompile never reaches the site.
+            'publishedHtml' => $this->mediumText(),
             'compiledText' => $this->mediumText(),
             'stamp' => $this->text(),
             'overrides' => $this->text(),

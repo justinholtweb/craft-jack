@@ -126,20 +126,46 @@ register_shutdown_function(static function() use (
     $plugin->profiles->saveGlobal($originalProfile);
 
     if ($plugin->edition !== $originalEdition) {
-        Craft::$app->getPlugins()->switchEdition('jack', $originalEdition);
+        switchJackEdition($originalEdition);
     }
-
-    // Project config writes from a console script are buffered and simply lost otherwise.
-    Craft::$app->getProjectConfig()->saveModifiedConfigData();
 
     echo "\nCleaned up.\n";
 });
 
-Craft::$app->getPlugins()->switchEdition('jack', Plugin::EDITION_PRO);
+/**
+ * Switches the edition and flushes the write.
+ *
+ * Project config writes from a console script are buffered: left unflushed, the next
+ * switchEdition in this run throws StaleResourceException rather than switching. The harness is
+ * also shared, so another session may have written project config since this run loaded it; the
+ * reset re-reads it first instead of failing on somebody else's write.
+ */
+function switchJackEdition(string $edition): void
+{
+    $config = Craft::$app->getProjectConfig();
 
-// Project config writes from a console script are buffered. Left unflushed, the next
-// switchEdition in this run throws StaleResourceException rather than switching.
-Craft::$app->getProjectConfig()->saveModifiedConfigData();
+    for ($attempt = 1; ; $attempt++) {
+        // getIsInstalled(true) drops the cached info row, which is where the config version
+        // the stale check compares against lives.
+        Craft::$app->getIsInstalled(true);
+        $config->reset();
+
+        try {
+            Craft::$app->getPlugins()->switchEdition('jack', $edition);
+            $config->saveModifiedConfigData();
+
+            return;
+        } catch (craft\errors\StaleResourceException|craft\errors\BusyResourceException $e) {
+            if ($attempt >= 5) {
+                throw $e;
+            }
+
+            usleep(500000);
+        }
+    }
+}
+
+switchJackEdition(Plugin::EDITION_PRO);
 
 // ---------------------------------------------------------------------------------------------
 
@@ -370,6 +396,35 @@ check('clauses use the current statute names', function() use ($plugin) {
 // ---------------------------------------------------------------------------------------------
 
 section('Placeholders and optional runs');
+
+check('an English address names the country in English', function() use ($plugin) {
+    $method = new ReflectionMethod($plugin->compiler, 'localizeAddress');
+
+    return $method->invoke($plugin->compiler, '1 Grand Canal Street Lower, Dublin 2, Irland', 'en') === '1 Grand Canal Street Lower, Dublin 2, Ireland'
+        && $method->invoke($plugin->compiler, 'Musterstraße 1, Irland', 'de') === 'Musterstraße 1, Irland'
+        ?: 'country left in German';
+});
+
+check('a javascript: link fact counts as missing, not as a link', function() use ($plugin) {
+    $missing = [];
+    $html = $plugin->compiler->resolve('[[<a href="{{ contact.formUrl }}">form</a>]]', ['contact.formUrl' => 'javascript:alert(1)'], $missing);
+
+    return $html === '' ?: $html;
+});
+
+check('an https link fact is kept', function() use ($plugin) {
+    $missing = [];
+    $html = $plugin->compiler->resolve('<a href="{{ contact.formUrl }}">form</a>', ['contact.formUrl' => 'https://example.com/contact'], $missing);
+
+    return str_contains($html, 'href="https://example.com/contact"') ?: $html;
+});
+
+check('an array where a fact belongs is missing, not "Array"', function() use ($plugin) {
+    $missing = [];
+    $html = $plugin->compiler->resolve('<p>{{ company.name }}</p>', ['company.name' => ['x']], $missing);
+
+    return $html === '<p></p>' && $missing === ['company.name'] ?: $html;
+});
 
 $compiler = $plugin->compiler;
 
@@ -1295,6 +1350,61 @@ check('renders nothing rather than throwing for an uncompiled document', functio
     return (string)$plugin->renderer->render($blank) === '';
 });
 
+check('a recompile does not reach the page until it is published', function() use ($plugin, $document) {
+    $fresh = Document::find()->id($document->id)->one();
+    $fresh->compiledHtml = '<section id="x"><h2>Draft</h2><p>UNPUBLISHED-DRAFT</p></section>';
+    Craft::$app->getElements()->saveElement($fresh, false);
+
+    $reloaded = Document::find()->id($document->id)->one();
+    $html = (string)$plugin->renderer->render($reloaded);
+    $plugin->documents->compile($reloaded);
+
+    return !str_contains($html, 'UNPUBLISHED-DRAFT') && str_contains($html, 'Testfirma')
+        ?: 'the draft reached the page';
+});
+
+check('the audit reports unpublished changes', function() use ($plugin, $document) {
+    $fresh = Document::find()->id($document->id)->one();
+    $fresh->compiledHtml .= '<p>more</p>';
+    Craft::$app->getElements()->saveElement($fresh, false);
+    $titles = array_map(static fn(Finding $f) => $f->title, $plugin->audit->run(null, false));
+    $plugin->documents->compile($fresh);
+
+    foreach ($titles as $title) {
+        if (str_contains($title, 'unpublished changes')) {
+            return true;
+        }
+    }
+
+    return 'no unpublished-changes finding';
+});
+
+check('a document that was never published renders nothing', function() use ($plugin) {
+    $draft = new Document();
+    $draft->documentType = 'imprint';
+    $draft->siteId = Craft::$app->getSites()->getPrimarySite()->id;
+    $draft->compiledHtml = '<p>compiled, never published</p>';
+
+    return (string)$plugin->renderer->render($draft) === '' && $plugin->renderer->toc($draft) === [];
+});
+
+check('a disabled document renders nothing, even by handle', function() use ($plugin, $document) {
+    $fresh = Document::find()->id($document->id)->one();
+    $fresh->enabled = false;
+
+    return (string)$plugin->renderer->render($fresh) === '' ?: 'a disabled document rendered';
+});
+
+check('dates survive a save without moving by the UTC offset', function() use ($plugin, $document) {
+    $fresh = Document::find()->id($document->id)->one();
+    $plugin->documents->publish($fresh, 'date check');
+    Craft::$app->getElements()->saveElement(Document::find()->id($document->id)->one(), false);
+    $reloaded = Document::find()->id($document->id)->one();
+    $drift = abs($reloaded->publishedAt->getTimestamp() - time());
+
+    return $drift < 120 ?: 'published ' . $drift . ' seconds away from now';
+});
+
 check('the Twig variable finds a document by type', function() {
     $variable = new justinholtweb\jack\twig\JackVariable();
 
@@ -1379,11 +1489,25 @@ check('flags a document that compiles to nothing', function() use ($plugin, &$cr
     return $found ?: implode(' / ', $titles);
 });
 
-check('the problem count ignores notices', function() use ($plugin) {
-    $findings = $plugin->audit->run();
+check('the problem count ignores notices and leaves the detector to the audit screen', function() use ($plugin) {
+    $plugin->audit->invalidate();
+    $findings = $plugin->audit->run(null, false);
     $serious = count(array_filter($findings, static fn(Finding $f) => $f->severity !== Finding::SEVERITY_NOTICE));
 
-    return $plugin->audit->problemCount() === $serious;
+    return $plugin->audit->problemCount() === $serious ?: $plugin->audit->problemCount() . ' vs ' . $serious;
+});
+
+check('the problem count is recounted after the facts change', function() use ($plugin) {
+    $before = $plugin->audit->problemCount();
+    Craft::$app->getCache()->set(
+        justinholtweb\jack\services\Audit::CACHE_TAG . ':count:' . Craft::$app->getSites()->getPrimarySite()->id,
+        999,
+        3600,
+        new yii\caching\TagDependency(['tags' => justinholtweb\jack\services\Audit::CACHE_TAG]),
+    );
+    $plugin->documents->onFactsChanged();
+
+    return $plugin->audit->problemCount() === $before ?: 'still serving the stale count';
 });
 
 // ---------------------------------------------------------------------------------------------
@@ -1391,7 +1515,7 @@ check('the problem count ignores notices', function() use ($plugin) {
 section('Detector');
 
 $templatePath = Craft::$app->getPath()->getSiteTemplatesPath() . '/jack-detector-' . $suffix . '.twig';
-file_put_contents($templatePath, "<script src=\"https://www.googletagmanager.com/gtag/js?id=G-ABCDEF1234\"></script>\n<iframe src=\"https://www.youtube.com/embed/xyz\"></iframe>\n");
+file_put_contents($templatePath, "<script src=\"https://www.googletagmanager.com/gtag/js?id=G-ABCDEF1234\"></script>\n<iframe src=\"https://www.youtube.com/embed/xyz\" data-key=\"sk_live_51HxQfakefakefakefake\"></iframe>\n");
 $tempFiles[] = $templatePath;
 
 check('finds a service in a template', function() use ($plugin) {
@@ -1431,6 +1555,18 @@ check('never puts a secret in the evidence', function() use ($plugin) {
         foreach ($detection->evidence as $item) {
             if ($detection->via === 'env' && $item['excerpt'] !== 'set') {
                 return 'an environment value leaked into the report';
+            }
+        }
+    }
+
+    return true;
+});
+
+check('blanks a key that sits on the same line as a match', function() use ($plugin) {
+    foreach ($plugin->detector->detect() as $detection) {
+        foreach ($detection->evidence as $item) {
+            if (str_contains((string)$item['excerpt'], 'sk_live_')) {
+                return 'a key was quoted: ' . $item['excerpt'];
             }
         }
     }
@@ -1498,16 +1634,12 @@ check('Lite refuses overrides, detection, history and the console', fn() => !Edi
 check('Lite still gets told a document is out of date', fn() => Edition::allowsChangeDetail(false) === false);
 
 check('a document compiled under Pro still renders under Lite', function() use ($plugin, $document) {
-    $config = Craft::$app->getProjectConfig();
-
-    Craft::$app->getPlugins()->switchEdition('jack', Plugin::EDITION_LITE);
-    $config->saveModifiedConfigData();
+    switchJackEdition(Plugin::EDITION_LITE);
 
     $fresh = Document::find()->id($document->id)->one();
     $html = (string)$plugin->renderer->render($fresh);
 
-    Craft::$app->getPlugins()->switchEdition('jack', Plugin::EDITION_PRO);
-    $config->saveModifiedConfigData();
+    switchJackEdition(Plugin::EDITION_PRO);
 
     return str_contains($html, 'Testfirma') ?: 'a lapsed licence blanked a published legal text';
 });

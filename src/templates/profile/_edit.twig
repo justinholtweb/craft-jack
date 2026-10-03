@@ -11,6 +11,21 @@
     {% endif %}
 {% endblock %}
 
+{% block sidebar %}
+    {% if multiSite %}
+        {% set navItems = { global: { label: 'Global'|t('jack'), url: 'jack/profile' } } %}
+        {% for s in sites %}
+            {% set navItems = navItems|merge({ (s.handle): { label: s.name|t('site'), url: 'jack/profile/' ~ s.handle } }) %}
+        {% endfor %}
+        <h2 class="h6 jack-sidebar-heading">{{ 'Per-site overrides'|t('jack') }}</h2>
+        {% include '_includes/nav' with {
+            label: 'Per-site overrides'|t('jack'),
+            items: navItems,
+            selectedItem: site ? site.handle : 'global',
+        } only %}
+    {% endif %}
+{% endblock %}
+
 {% block content %}
     {{ actionInput('jack/profile/save') }}
     {{ redirectInput(site ? 'jack/profile/' ~ site.handle : 'jack/profile') }}
@@ -23,26 +38,23 @@
             <p>{{ 'Everything Jack knows about you. Each of these is a fact some clause needs; fill one in here and it is right in every document, in every language, at once.'|t('jack') }}</p>
         {% endif %}
 
-        <div style="margin: 1rem 0 1.5rem;">
-            <div style="height: 6px; background: #e4e7eb; border-radius: 3px; overflow: hidden;">
-                <div style="height: 100%; width: {{ (completeness * 100)|round }}%; background: {{ completeness > 0.85 ? '#27ab83' : (completeness > 0.6 ? '#f0b429' : '#cf1124') }};"></div>
+        {% set percent = (completeness * 100)|round %}
+        {% set level = completeness > 0.85 ? 'good' : (completeness > 0.6 ? 'fair' : 'poor') %}
+        <div class="jack-completeness">
+            <div class="jack-meter jack-meter--{{ level }}"
+                 role="progressbar"
+                 aria-valuemin="0"
+                 aria-valuemax="100"
+                 aria-valuenow="{{ percent }}"
+                 aria-labelledby="jack-completeness-label">
+                <div class="jack-meter-fill" style="width: {{ percent }}%;"></div>
             </div>
-            <p class="light smalltext" style="margin-top: 4px;">{{ '{percent}% of the facts the clause library asks for are filled in.'|t('jack', { percent: (completeness * 100)|round }) }}</p>
+            <p id="jack-completeness-label" class="light smalltext">{{ '{percent}% of the facts the clause library asks for are filled in.'|t('jack', { percent: percent }) }}</p>
         </div>
     </div>
 
-    {% if multiSite %}
-        <div class="readable">
-            <p class="light smalltext">
-                {{ 'Per-site overrides:'|t('jack') }}
-                <a href="{{ url('jack/profile') }}">{{ 'Global'|t('jack') }}</a>
-                {% for s in sites %} · <a href="{{ url('jack/profile/' ~ s.handle) }}">{{ s.name }}</a>{% endfor %}
-            </p>
-        </div>
-    {% endif %}
-
     {% for group, groupFacts in groups %}
-        <div class="pane" style="margin-bottom: 14px;">
+        <div class="pane jack-group">
             <h2>{{ groupLabels[group] ?? group|title }}</h2>
 
             {% for key, fact in groupFacts %}
@@ -92,3 +104,14 @@
         </div>
     {% endfor %}
 {% endblock %}
+
+{% css %}
+.jack-completeness { margin-block: var(--m) var(--xl); }
+.jack-completeness p { margin-block-start: var(--xs); }
+.jack-meter { block-size: 6px; background-color: var(--gray-200); border-radius: var(--radius-sm); overflow: hidden; }
+.jack-meter-fill { block-size: 100%; background-color: var(--fg-error); }
+.jack-meter--fair .jack-meter-fill { background-color: var(--fg-warning); }
+.jack-meter--good .jack-meter-fill { background-color: var(--fg-success); }
+.jack-group { margin-block-end: var(--m); }
+.jack-sidebar-heading { padding-inline: var(--s); }
+{% endcss %}

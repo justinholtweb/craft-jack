@@ -33,6 +33,7 @@ class Profiles extends Component
             return $this->global;
         }
 
+        /** @var ProfileRecord|null $record */
         $record = ProfileRecord::find()->where(['siteId' => null])->orderBy(['id' => SORT_ASC])->one();
 
         if (!$record) {
@@ -49,6 +50,7 @@ class Profiles extends Component
             return $this->overrides[$siteId] ?: null;
         }
 
+        /** @var ProfileRecord|null $record */
         $record = ProfileRecord::find()->where(['siteId' => $siteId])->one();
         $profile = $record ? $this->toModel($record) : false;
         $this->overrides[$siteId] = $profile;
@@ -287,7 +289,15 @@ class Profiles extends Component
                 $value = trim($value);
             }
 
-            if ($value === '' || $value === null) {
+            // Every fact is one line or one paragraph of text; an array from a tampered post would
+            // only break the next compile.
+            if ($value === '' || $value === null || !is_scalar($value)) {
+                continue;
+            }
+
+            // Links end up in an href. Only http(s) is kept, so a profile editor cannot put a
+            // `javascript:` link on every public page.
+            if (($known[$key]['type'] ?? '') === 'url' && !Compiler::isWebUrl((string)$value)) {
                 continue;
             }
 

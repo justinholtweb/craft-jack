@@ -5,6 +5,22 @@
 {% set selectedSubnavItem = 'documents' %}
 {% set crumbs = [{ label: 'Documents'|t('jack'), url: url('jack/documents') }] %}
 
+{% set typeOptions = [] %}
+{% set firstAllowed = null %}
+{% for type, label in typeLabels %}
+    {% set allowed = type in availableTypes %}
+    {% set exists = type not in missingTypes %}
+    {% if allowed and firstAllowed is null %}
+        {% set firstAllowed = type %}
+    {% endif %}
+    {% set suffix = not allowed ? 'Pro'|t('jack') : (exists ? 'you already have one'|t('jack') : null) %}
+    {% set typeOptions = typeOptions|merge([{
+        label: suffix ? label ~ ' (' ~ suffix ~ ')' : label,
+        value: type,
+        disabled: not allowed,
+    }]) %}
+{% endfor %}
+
 {% block content %}
     <form method="post" accept-charset="UTF-8">
         {{ csrfInput() }}
@@ -14,26 +30,13 @@
             <p>{{ 'Pick what you need. Jack writes it from the profile and the inventory — you are choosing a document, not a blank page.'|t('jack') }}</p>
         </div>
 
-        <div class="field">
-            {% for type, label in typeLabels %}
-                {% set allowed = type in availableTypes %}
-                {% set exists = type not in missingTypes %}
-                <div class="checkbox-row" style="padding: 6px 0; {{ allowed ? '' : 'opacity: .5;' }}">
-                    <input type="radio"
-                           name="documentType"
-                           id="type-{{ type }}"
-                           value="{{ type }}"
-                           class="radio"
-                           {{ allowed ? '' : 'disabled' }}
-                           {{ loop.first ? 'checked' : '' }}>
-                    <label for="type-{{ type }}">
-                        <strong>{{ label }}</strong>
-                        {% if exists %}<span class="light">— {{ 'you already have one'|t('jack') }}</span>{% endif %}
-                        {% if not allowed %}<span class="light">— {{ 'Pro'|t('jack') }}</span>{% endif %}
-                    </label>
-                </div>
-            {% endfor %}
-        </div>
+        {{ forms.radioGroupField({
+            label: 'Document type'|t('jack'),
+            id: 'documentType',
+            name: 'documentType',
+            options: typeOptions,
+            value: firstAllowed,
+        }) }}
 
         <div class="buttons">
             <button type="submit" class="btn submit">{{ 'Create'|t('jack') }}</button>

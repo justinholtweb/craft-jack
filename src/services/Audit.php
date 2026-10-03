@@ -9,6 +9,7 @@ use justinholtweb\jack\models\Edition;
 use justinholtweb\jack\models\Finding;
 use justinholtweb\jack\models\ServiceEntry;
 use justinholtweb\jack\Plugin;
+use yii\caching\TagDependency;
 
 /**
  * What is wrong with this site's legal texts, in the order it is worth fixing.
@@ -22,10 +23,12 @@ use justinholtweb\jack\Plugin;
  */
 class Audit extends Component
 {
+    public const CACHE_TAG = 'jack:audit';
+
     /**
      * @return Finding[] ordered by severity
      */
-    public function run(?int $siteId = null): array
+    public function run(?int $siteId = null, bool $withDetections = true): array
     {
         $siteId ??= Craft::$app->getSites()->getPrimarySite()->id;
         $plugin = Plugin::getInstance();
@@ -35,7 +38,7 @@ class Audit extends Component
             $this->checkDocumentHealth($siteId),
             $this->checkProfile($siteId),
             $this->checkInventory(),
-            $plugin->isPro() ? $this->checkDetections() : [],
+            $plugin->isPro() && $withDetections ? $this->checkDetections() : [],
         );
 
         usort($findings, static fn(Finding $a, Finding $b) => [$a->weight(), $a->title] <=> [$b->weight(), $b->title]);
@@ -44,14 +47,34 @@ class Audit extends Component
     }
 
     /**
-     * A single number for the nav badge and the dashboard: how many things need attention.
+     * A single number for the nav badge: how many things need attention.
+     *
+     * The nav is built on every CP request, and a full audit recompiles every document, so the
+     * count is cached until something it depends on changes. It leaves the detector out: reading
+     * every template on the site is a job for the audit screen, not for each page load.
      */
     public function problemCount(?int $siteId = null): int
     {
-        return count(array_filter(
-            $this->run($siteId),
-            static fn(Finding $finding) => $finding->severity !== Finding::SEVERITY_NOTICE,
-        ));
+        $siteId ??= Craft::$app->getSites()->getPrimarySite()->id;
+
+        return (int)Craft::$app->getCache()->getOrSet(
+            self::CACHE_TAG . ':count:' . $siteId,
+            fn() => count(array_filter(
+                $this->run($siteId, false),
+                static fn(Finding $finding) => $finding->severity !== Finding::SEVERITY_NOTICE,
+            )),
+            3600,
+            new TagDependency(['tags' => self::CACHE_TAG]),
+        );
+    }
+
+    /**
+     * Drops the cached badge count. Called whenever a document, the profile, the inventory or the
+     * settings change.
+     */
+    public function invalidate(): void
+    {
+        TagDependency::invalidate(Craft::$app->getCache(), self::CACHE_TAG);
     }
 
     /**
@@ -131,6 +154,20 @@ class Audit extends Component
                 );
 
                 continue;
+            }
+
+            if (trim((string)$document->publishedHtml) === '') {
+                $findings[] = Finding::critical(
+                    Craft::t('jack', '“{title}” has never been published', ['title' => $document->title]),
+                    Craft::t('jack', 'Visitors only ever see a published version, so this document’s page is empty until somebody publishes it.'),
+                    Craft::t('jack', 'Open the document, read it through, and publish it.'),
+                );
+            } elseif (trim((string)$document->publishedHtml) !== trim((string)$document->compiledHtml)) {
+                $findings[] = Finding::warning(
+                    Craft::t('jack', '“{title}” has unpublished changes', ['title' => $document->title]),
+                    Craft::t('jack', 'The draft has moved on since the last published version, and visitors still see the old text.'),
+                    Craft::t('jack', 'Review the draft and publish it.'),
+                );
             }
 
             $missing = $document->getMissingFacts();

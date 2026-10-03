@@ -4,7 +4,7 @@
 {% set selectedSubnavItem = 'documents' %}
 {% set crumbs = [
     { label: 'Documents'|t('jack'), url: url('jack/documents') },
-    { label: document.title, url: document.getCpEditUrl() },
+    { label: document.title, url: url('jack/documents/' ~ document.id, { siteId: document.siteId }) },
 ] %}
 
 {% block content %}
@@ -16,32 +16,34 @@
         <table class="data fullwidth">
             <thead>
                 <tr>
-                    <th>{{ 'Published'|t('jack') }}</th>
-                    <th>{{ 'Note'|t('jack') }}</th>
-                    <th>{{ 'Library'|t('jack') }}</th>
-                    <th></th>
+                    <th scope="col">{{ 'Published'|t('jack') }}</th>
+                    <th scope="col">{{ 'Note'|t('jack') }}</th>
+                    <th scope="col">{{ 'Library'|t('jack') }}</th>
+                    <th scope="col"><span class="visually-hidden">{{ 'Actions'|t('app') }}</span></th>
                 </tr>
             </thead>
             <tbody>
                 {% for version in versions %}
                     <tr>
-                        <td>{{ version.dateCreated|datetime('short') }}</td>
-                        <td>{{ version.note ?: '—' }}</td>
-                        <td class="light">{{ version.libraryVersion ?: '—' }}</td>
+                        <td>{{ version.created|datetime('short') }}{% if loop.first %} <span class="light">({{ 'latest'|t('jack') }})</span>{% endif %}</td>
+                        <td>{% if version.note %}{{ version.note }}{% else %}<span class="light">{{ 'No note'|t('jack') }}</span>{% endif %}</td>
+                        <td class="light">{{ version.libraryVersion ?: '' }}</td>
                         <td class="thin">
-                            <a class="btn small" href="{{ url('jack/documents/' ~ document.id ~ '/compare', {
-                                siteId: document.siteId,
-                                from: version.id,
-                                to: versions[0].id,
-                            }) }}">{{ 'Compare with latest'|t('jack') }}</a>
+                            {% if not loop.first %}
+                                <a class="btn small" href="{{ url('jack/documents/' ~ document.id ~ '/compare', {
+                                    siteId: document.siteId,
+                                    from: version.id,
+                                    to: versions[0].id,
+                                }) }}">{{ 'Compare with latest'|t('jack') }}</a>
+                            {% endif %}
                         </td>
                     </tr>
                 {% endfor %}
             </tbody>
         </table>
     {% else %}
-        <div class="readable">
-            <p class="light">{{ 'Nothing published yet. Publishing freezes what the document currently says into a version somebody can be pointed at later.'|t('jack') }}</p>
+        <div class="zilch">
+            <p>{{ 'Nothing published yet. Publishing freezes what the document currently says into a version somebody can be pointed at later.'|t('jack') }}</p>
         </div>
     {% endif %}
 {% endblock %}

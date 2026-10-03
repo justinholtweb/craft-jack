@@ -1,4 +1,5 @@
 {% extends '_layouts/cp' %}
+{% import '_includes/forms' as forms %}
 
 {% set title = 'Undeclared services'|t('jack') %}
 {% set selectedSubnavItem = 'inventory' %}
@@ -12,42 +13,74 @@
         <p class="light smalltext">{{ 'The usual cause is not dishonesty. It is that somebody embedded a video in March and the policy was written in January.'|t('jack') }}</p>
     </div>
 
-    {% if undeclared|length and canManage %}
-        <form method="post" accept-charset="UTF-8">
-            {{ csrfInput() }}
-            {{ actionInput('jack/inventory/adopt') }}
+    {% if undeclared|length %}
+        {% if canManage %}
+            <form method="post" accept-charset="UTF-8">
+                {{ csrfInput() }}
+                {{ actionInput('jack/inventory/adopt') }}
+        {% endif %}
 
-            <div class="pane">
-                <h2>{{ '{n, plural, =1{1 service is not declared} other{# services are not declared}}'|t('jack', { n: undeclared|length }) }}</h2>
+        <div class="pane jack-group">
+            <h2 id="jack-undeclared-heading">{{ '{n, plural, =1{1 service is not declared} other{# services are not declared}}'|t('jack', { n: undeclared|length }) }}</h2>
 
-                {% for detection in undeclared %}
-                    <div style="padding: 10px 0; border-bottom: 1px solid #e4e7eb;">
-                        <label>
-                            <input type="checkbox" name="serviceKeys[]" value="{{ detection.serviceKey }}" checked class="checkbox">
-                            <strong>{{ detection.label }}</strong>
-                            <span class="light smalltext">{{ detection.category }}</span>
-                        </label>
-                        <ul class="light smalltext" style="margin: 6px 0 0 24px;">
-                            {% for item in detection.evidence|slice(0, 5) %}
-                                <li>
-                                    <code>{{ item.location }}{% if item.line %}:{{ item.line }}{% endif %}</code>
-                                    {% if item.excerpt %}<span style="opacity:.75;"> — {{ item.excerpt|slice(0, 90) }}</span>{% endif %}
-                                </li>
-                            {% endfor %}
-                            {% if detection.evidence|length > 5 %}
-                                <li>{{ '… and {n} more'|t('jack', { n: detection.evidence|length - 5 }) }}</li>
+            <table class="data fullwidth" aria-labelledby="jack-undeclared-heading">
+                <thead>
+                    <tr>
+                        {% if canManage %}
+                            <th scope="col" class="checkbox-cell"><span class="visually-hidden">{{ 'Add'|t('jack') }}</span></th>
+                        {% endif %}
+                        <th scope="col">{{ 'Service'|t('jack') }}</th>
+                        <th scope="col">{{ 'Category'|t('jack') }}</th>
+                        <th scope="col">{{ 'Evidence'|t('jack') }}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for detection in undeclared %}
+                        {% set checkboxId = 'adopt-' ~ detection.serviceKey %}
+                        <tr>
+                            {% if canManage %}
+                                <td class="checkbox-cell">
+                                    {{ forms.checkbox({
+                                        id: checkboxId,
+                                        name: 'serviceKeys[]',
+                                        value: detection.serviceKey,
+                                        checked: true,
+                                        aria: { label: 'Add {service}'|t('jack', { service: detection.label }) },
+                                    }) }}
+                                </td>
                             {% endif %}
-                        </ul>
-                    </div>
-                {% endfor %}
+                            <th scope="row"><strong>{{ detection.label }}</strong></th>
+                            <td class="light">{{ detection.category }}</td>
+                            <td>
+                                <ul class="light smalltext">
+                                    {% for item in detection.evidence|slice(0, 5) %}
+                                        <li>
+                                            <code>{{ item.location }}{% if item.line %}:{{ item.line }}{% endif %}</code>
+                                            {% if item.excerpt %}<span class="jack-excerpt">{{ item.excerpt|slice(0, 90) }}</span>{% endif %}
+                                        </li>
+                                    {% endfor %}
+                                    {% if detection.evidence|length > 5 %}
+                                        <li>{{ '… and {n} more'|t('jack', { n: detection.evidence|length - 5 }) }}</li>
+                                    {% endif %}
+                                </ul>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
 
+            {% if canManage %}
                 <div class="buttons">
                     <button type="submit" class="btn submit">{{ 'Add the ticked services'|t('jack') }}</button>
                 </div>
-            </div>
-        </form>
-    {% elseif undeclared|length == 0 %}
-        <div class="pane">
+            {% endif %}
+        </div>
+
+        {% if canManage %}
+            </form>
+        {% endif %}
+    {% else %}
+        <div class="pane jack-group">
             <p>{{ 'Everything Jack can see on this site is already in the inventory.'|t('jack') }}</p>
             <p class="light smalltext">{{ 'Detection reads files. A service loaded by a tag manager, or injected by a third-party script at runtime, will not appear here — Jack can only find what is written down somewhere.'|t('jack') }}</p>
         </div>
@@ -55,7 +88,7 @@
 
     {% set declared = detections|filter(d => d.declared) %}
     {% if declared|length %}
-        <div class="pane" style="margin-top: 14px;">
+        <div class="pane jack-group">
             <h2>{{ 'Found and already declared'|t('jack') }}</h2>
             <ul>
                 {% for detection in declared %}
@@ -65,3 +98,8 @@
         </div>
     {% endif %}
 {% endblock %}
+
+{% css %}
+.jack-group { margin-block-end: var(--m); }
+.jack-excerpt { display: block; color: var(--fg-subtle); }
+{% endcss %}

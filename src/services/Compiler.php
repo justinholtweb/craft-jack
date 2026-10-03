@@ -47,7 +47,8 @@ class Compiler extends Component
         'withdrawal.address',
     ];
 
-    private ?HTMLPurifier $purifier = null;
+    /** @var array<int, HTMLPurifier> Strict and permissive, built on first use. */
+    private array $purifiers = [];
 
     /**
      * @param array<string, mixed> $overrides per-document clause overrides and custom sections
@@ -343,6 +344,25 @@ class Compiler extends Component
         return implode("\n", array_filter($out));
     }
 
+    /**
+     * Swaps the German country at the end of a registry address for the document's language.
+     * Anything not in the library's country list is left exactly as written.
+     */
+    private function localizeAddress(string $address, string $language): string
+    {
+        $countries = Plugin::getInstance()->library->templates()['countries'] ?? [];
+
+        foreach ($countries as $german => $names) {
+            if (str_ends_with($address, ', ' . $german)) {
+                $name = $names[$language] ?? $names[substr($language, 0, 2)] ?? $german;
+
+                return substr($address, 0, -strlen($german)) . $name;
+            }
+        }
+
+        return $address;
+    }
+
     private function renderService(ServiceEntry $entry, string $language, CompiledDocument $compiled): string
     {
         $library = Plugin::getInstance()->library;
@@ -359,7 +379,7 @@ class Compiler extends Component
         $facts = [
             'service.label' => $entry->label($language),
             'service.provider' => (string)$entry->get('provider', ''),
-            'service.providerAddress' => (string)$entry->get('providerAddress', ''),
+            'service.providerAddress' => $this->localizeAddress((string)$entry->get('providerAddress', ''), $language),
             'service.parent' => (string)$entry->get('parent', ''),
             'service.purpose' => $entry->text('purpose', $language),
             'service.data' => $entry->text('data', $language),
@@ -518,6 +538,17 @@ class Compiler extends Component
             return '';
         }
 
+        // A link fact lands in an href, where escaping does nothing against `javascript:`. One
+        // that is not a plain web address is treated as never given, before the optional runs
+        // judge what is filled, so a `[[ … ]]` around the link vanishes with it.
+        if ($html) {
+            foreach ($facts as $key => $value) {
+                if (is_string($value) && self::isUrlKey((string)$key) && !self::isWebUrl($value)) {
+                    unset($facts[$key]);
+                }
+            }
+        }
+
         $template = $this->resolveOptional($template, $facts);
 
         return preg_replace_callback(
@@ -526,7 +557,7 @@ class Compiler extends Component
                 $key = $match[1];
                 $value = $facts[$key] ?? null;
 
-                if ($value === null || $value === '' || $value === false) {
+                if (!is_scalar($value) || $value === '' || $value === false) {
                     $missing[] = $key;
 
                     return '';
@@ -542,6 +573,22 @@ class Compiler extends Component
             },
             $template,
         ) ?? '';
+    }
+
+    /**
+     * Whether a fact is a link by name: `contact.formUrl`, `service.privacyUrl` and so on.
+     */
+    public static function isUrlKey(string $key): bool
+    {
+        return str_ends_with($key, 'Url') || str_ends_with($key, '.url');
+    }
+
+    /**
+     * An absolute http(s) address and nothing else, so a link in a legal text cannot run script.
+     */
+    public static function isWebUrl(string $value): bool
+    {
+        return (bool)preg_match('~^https?://[^\s<>"]+$~i', trim($value));
     }
 
     /**
@@ -630,17 +677,20 @@ class Compiler extends Component
      */
     public function purify(string $html): string
     {
-        if (!Plugin::getInstance()->getSettings()->purifyOutput || trim($html) === '') {
+        if (trim($html) === '') {
             return $html;
         }
 
-        return $this->purifier()->purify($html);
+        // Always purified. Switching the setting off widens what an editor may write (images,
+        // classes, divs) but never lets a script or a `javascript:` link through: the people who
+        // write overrides are not the admins whose sessions such a link would run in.
+        return $this->purifier(Plugin::getInstance()->getSettings()->purifyOutput)->purify($html);
     }
 
-    private function purifier(): HTMLPurifier
+    private function purifier(bool $strict): HTMLPurifier
     {
-        if ($this->purifier !== null) {
-            return $this->purifier;
+        if (isset($this->purifiers[$strict])) {
+            return $this->purifiers[$strict];
         }
 
         $cachePath = \Craft::$app->getPath()->getRuntimePath() . DIRECTORY_SEPARATOR . 'jack' . DIRECTORY_SEPARATOR . 'htmlpurifier';
@@ -653,11 +703,17 @@ class Compiler extends Component
         $config->set('Attr.AllowedFrameTargets', ['_blank']);
         $config->set('Attr.AllowedRel', ['noopener', 'nofollow', 'noreferrer']);
         $config->set('Attr.EnableID', true);
-        $config->set('HTML.AllowedElements', 'p,br,strong,em,b,i,u,a,ul,ol,li,h3,h4,h5,table,thead,tbody,tr,th,td,code,blockquote,small,sup,sub,hr,span,dl,dt,dd');
-        $config->set('HTML.AllowedAttributes', 'a.href,a.rel,a.target,a.title,th.scope,td.colspan,th.colspan,span.class,table.class');
+        if ($strict) {
+            $config->set('HTML.AllowedElements', 'p,br,strong,em,b,i,u,a,ul,ol,li,h3,h4,h5,table,thead,tbody,tr,th,td,code,blockquote,small,sup,sub,hr,span,dl,dt,dd');
+            $config->set('HTML.AllowedAttributes', 'a.href,a.rel,a.target,a.title,th.scope,td.colspan,th.colspan,span.class,table.class');
+        } else {
+            $config->set('Attr.AllowedClasses', null);
+            $config->set('HTML.ForbiddenElements', ['script', 'style', 'iframe', 'object', 'embed', 'form', 'input', 'button']);
+        }
+
         $config->set('Cache.SerializerPath', $cachePath);
         $config->set('URI.AllowedSchemes', ['http' => true, 'https' => true, 'mailto' => true, 'tel' => true]);
 
-        return $this->purifier = new HTMLPurifier($config);
+        return $this->purifiers[$strict] = new HTMLPurifier($config);
     }
 }

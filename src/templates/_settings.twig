@@ -12,6 +12,7 @@
     id: 'autoCompile',
     name: 'autoCompile',
     on: settings.autoCompile,
+    errors: settings.getErrors('autoCompile'),
 }) }}
 
 {{ forms.lightswitchField({
@@ -20,6 +21,7 @@
     id: 'enableDocumentUrls',
     name: 'enableDocumentUrls',
     on: settings.enableDocumentUrls,
+    errors: settings.getErrors('enableDocumentUrls'),
 }) }}
 
 {{ forms.autosuggestField({
@@ -37,14 +39,16 @@
     id: 'showLastUpdated',
     name: 'showLastUpdated',
     on: settings.showLastUpdated,
+    errors: settings.getErrors('showLastUpdated'),
 }) }}
 
 {{ forms.lightswitchField({
-    label: 'Clean edited HTML'|t('jack'),
-    instructions: 'Run text you have rewritten through HTML Purifier. Library text is never touched.'|t('jack'),
+    label: 'Restrict edited text to basic markup'|t('jack'),
+    instructions: 'Off allows more HTML in text you have rewritten. HTML Purifier runs either way, so scripts and javascript: links never pass. Library text is never touched.'|t('jack'),
     id: 'purifyOutput',
     name: 'purifyOutput',
     on: settings.purifyOutput,
+    errors: settings.getErrors('purifyOutput'),
 }) }}
 
 <hr>
@@ -64,6 +68,7 @@
     allowAdd: true,
     allowDelete: true,
     allowReorder: true,
+    errors: settings.getErrors('detectorPaths'),
 }) }}
 
 {{ forms.textField({
@@ -72,6 +77,7 @@
     id: 'detectorExtensions',
     name: 'detectorExtensions',
     value: settings.detectorExtensions|join(', '),
+    errors: settings.getErrors('detectorExtensions'),
 }) }}
 
 {{ forms.textField({
@@ -80,9 +86,17 @@
     id: 'detectorMaxFileSize',
     name: 'detectorMaxFileSize',
     type: 'number',
+    min: 1,
     size: 6,
+    class: 'jack-number',
     value: settings.detectorMaxFileSize,
+    errors: settings.getErrors('detectorMaxFileSize'),
 }) }}
+
+{% css %}
+{# `size` is ignored on a number input, so the width has to come from CSS. #}
+input.jack-number { inline-size: 10ch; }
+{% endcss %}
 
 <div class="readable">
     <p class="light">{{ 'Clause library reviewed {date}.'|t('jack', { date: craft.jack.libraryVersion() }) }}</p>

@@ -37,7 +37,10 @@ class Inventory extends Component
 
         $entries = [];
 
-        foreach (ServiceRecord::find()->orderBy(['sortOrder' => SORT_ASC, 'id' => SORT_ASC])->all() as $record) {
+        /** @var ServiceRecord[] $records */
+        $records = ServiceRecord::find()->orderBy(['sortOrder' => SORT_ASC, 'id' => SORT_ASC])->all();
+
+        foreach ($records as $record) {
             $entry = $this->toModel($record);
             $entries[$entry->serviceKey] = $entry;
         }
@@ -91,7 +94,7 @@ class Inventory extends Component
 
     public function isEnabled(string $serviceKey): bool
     {
-        return ($this->all()[$serviceKey] ?? null)?->enabled ?? false;
+        return $this->all()[$serviceKey]->enabled ?? false;
     }
 
     /**

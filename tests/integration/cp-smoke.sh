@@ -6,7 +6,9 @@
 #
 # Creates a document of every type, walks its screens, then deletes what it created.
 
-JAR=/tmp/jack-cp-jar.txt
+# Per-run files: the harness is shared, and a second run clobbering the jar logs this one out.
+JAR=$(mktemp /tmp/jack-cp-jar.XXXXXX)
+PAGE=$(mktemp /tmp/jack-page.XXXXXX)
 rm -f "$JAR" /tmp/jack-smoke-failures
 
 CSRF=$(curl -s -b "$JAR" -c "$JAR" "http://localhost/index.php?p=actions/users/session-info" \
@@ -35,15 +37,15 @@ echo
 FAILED=0
 
 visit() {
-    CODE=$(curl -s -b "$JAR" -c "$JAR" -o /tmp/jack-page.html -w "%{http_code}" "http://localhost/admin/$1")
-    TITLE=$(grep -oE "<title>[^<]*" /tmp/jack-page.html | head -1 | sed "s/<title>//")
+    CODE=$(curl -s -b "$JAR" -c "$JAR" -o "$PAGE" -w "%{http_code}" "http://localhost/admin/$1")
+    TITLE=$(grep -oE "<title>[^<]*" "$PAGE" | head -1 | sed "s/<title>//")
 
     if [ "$CODE" = "200" ]; then
         echo "  ✓ $CODE  $1  — $TITLE"
     else
         FAILED=$((FAILED + 1))
         echo "  ✗ $CODE  $1  — $TITLE"
-        grep -oiE "(exception|Unable to|error)[^<]{0,180}" /tmp/jack-page.html | head -3
+        grep -oiE "(exception|Unable to|error)[^<]{0,180}" "$PAGE" | head -3
     fi
 }
 
@@ -135,8 +137,11 @@ post "recompile it" "jack/documents/compile" "documentId=$FIRST_ID" "siteId=1"
 post "publish it" "jack/documents/publish" "documentId=$FIRST_ID" "siteId=1" "note=smoke test"
 post "remove the service again" "jack/inventory/remove" "serviceKey=ga4"
 
-# The override has to have survived the round trip through the form.
-if curl -s "http://localhost/legal-notice" | grep -q "Alles gehört uns."; then
+# The override has to have survived the round trip through the form, and publishing is what puts
+# it on the page. Ask for the document's own URI: the shared harness has other plugins' entries
+# sitting on /legal-notice, so the seeded imprint is often /legal-notice-2.
+FIRST_URI=$(mysql -h db -udb -pdb db -N -e "SELECT uri FROM elements_sites WHERE elementId = $FIRST_ID AND siteId = 1" 2>/dev/null)
+if curl -s "http://localhost/${FIRST_URI:-legal-notice}" | grep -q "Alles gehört uns."; then
     echo "    ✓ the override reached the published page"
 else
     FAILED=$((FAILED + 1))

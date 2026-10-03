@@ -4,11 +4,11 @@ namespace justinholtweb\jack\services;
 
 use Craft;
 use craft\base\Component;
-use craft\helpers\Db;
 use craft\helpers\Json;
 use craft\helpers\StringHelper;
 use DateTime;
 use justinholtweb\jack\elements\Document;
+use justinholtweb\jack\events\DocumentEvent;
 use justinholtweb\jack\models\Edition;
 use justinholtweb\jack\Plugin;
 use justinholtweb\jack\records\VersionRecord;
@@ -24,6 +24,15 @@ use Throwable;
  */
 class Documents extends Component
 {
+    /** After a document is compiled and stored. */
+    public const EVENT_AFTER_COMPILE = 'afterCompile';
+
+    /** Before a version is published. Set `$event->isValid = false` to stop it. */
+    public const EVENT_BEFORE_PUBLISH = 'beforePublish';
+
+    /** After a version is published and live, e.g. to tell legal it went out. */
+    public const EVENT_AFTER_PUBLISH = 'afterPublish';
+
     /**
      * Compiles a document for one site and stores the result.
      *
@@ -40,13 +49,21 @@ class Documents extends Component
         $document->stamp = Json::encode($compiled->stamp);
         $document->warnings = Json::encode($compiled->warnings);
         $document->missingFacts = Json::encode($compiled->missingFacts);
-        $document->compiledAt = Db::prepareDateForDb(new DateTime());
+        $document->compiledAt = new DateTime();
 
         if (!$save) {
             return true;
         }
 
-        return Craft::$app->getElements()->saveElement($document, false);
+        if (!Craft::$app->getElements()->saveElement($document, false)) {
+            return false;
+        }
+
+        if ($this->hasEventHandlers(self::EVENT_AFTER_COMPILE)) {
+            $this->trigger(self::EVENT_AFTER_COMPILE, new DocumentEvent(['document' => $document]));
+        }
+
+        return true;
     }
 
     /**
@@ -92,6 +109,8 @@ class Documents extends Component
      */
     public function onFactsChanged(): void
     {
+        Plugin::getInstance()->audit->invalidate();
+
         if (!Plugin::getInstance()->getSettings()->autoCompile) {
             return;
         }
@@ -181,12 +200,21 @@ class Documents extends Component
     // -----------------------------------------------------------------------------------------
 
     /**
-     * Freezes what a document currently says into an immutable version row.
+     * Freezes what a document currently says into an immutable version row, and puts it live.
      */
     public function publish(Document $document, ?string $note = null): bool
     {
         if (!$document->compiledHtml) {
             return false;
+        }
+
+        if ($this->hasEventHandlers(self::EVENT_BEFORE_PUBLISH)) {
+            $event = new DocumentEvent(['document' => $document, 'note' => $note]);
+            $this->trigger(self::EVENT_BEFORE_PUBLISH, $event);
+
+            if (!$event->isValid) {
+                return false;
+            }
         }
 
         $record = new VersionRecord([
@@ -202,9 +230,20 @@ class Documents extends Component
             return false;
         }
 
-        $document->publishedAt = Db::prepareDateForDb(new DateTime());
+        // The site shows this copy and nothing else. Compiling moves compiledHtml; only this line
+        // moves what a visitor reads.
+        $document->publishedHtml = $document->compiledHtml;
+        $document->publishedAt = new DateTime();
 
-        return Craft::$app->getElements()->saveElement($document, false);
+        if (!Craft::$app->getElements()->saveElement($document, false)) {
+            return false;
+        }
+
+        if ($this->hasEventHandlers(self::EVENT_AFTER_PUBLISH)) {
+            $this->trigger(self::EVENT_AFTER_PUBLISH, new DocumentEvent(['document' => $document, 'note' => $note]));
+        }
+
+        return true;
     }
 
     /**
@@ -212,11 +251,14 @@ class Documents extends Component
      */
     public function versions(int $documentId, int $siteId, int $limit = 50): array
     {
-        return VersionRecord::find()
+        /** @var VersionRecord[] $versions */
+        $versions = VersionRecord::find()
             ->where(['documentId' => $documentId, 'siteId' => $siteId])
             ->orderBy(['dateCreated' => SORT_DESC, 'id' => SORT_DESC])
             ->limit($limit)
             ->all();
+
+        return $versions;
     }
 
     public function version(int $id): ?VersionRecord

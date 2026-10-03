@@ -130,4 +130,26 @@ return [
         'advertising' => ['de' => 'Werbung', 'en' => 'Advertising'],
         'social' => ['de' => 'Soziale Netzwerke', 'en' => 'Social networks'],
     ],
+    // The registry writes each provider's address once, ending in the country in German. The
+    // compiler swaps that last part for the document's language, so an English privacy policy
+    // does not send readers to "Dublin 2, Irland".
+    'countries' => [
+        'Deutschland' => ['de' => 'Deutschland', 'en' => 'Germany'],
+        'Estland' => ['de' => 'Estland', 'en' => 'Estonia'],
+        'Frankreich' => ['de' => 'Frankreich', 'en' => 'France'],
+        'Irland' => ['de' => 'Irland', 'en' => 'Ireland'],
+        'Kanada' => ['de' => 'Kanada', 'en' => 'Canada'],
+        'Vereinigtes Königreich' => ['de' => 'Vereinigtes Königreich', 'en' => 'United Kingdom'],
+        'Luxemburg' => ['de' => 'Luxemburg', 'en' => 'Luxembourg'],
+        'Malta' => ['de' => 'Malta', 'en' => 'Malta'],
+        'Neuseeland' => ['de' => 'Neuseeland', 'en' => 'New Zealand'],
+        'Niederlande' => ['de' => 'Niederlande', 'en' => 'Netherlands'],
+        'Schweden' => ['de' => 'Schweden', 'en' => 'Sweden'],
+        'USA' => ['de' => 'USA', 'en' => 'USA'],
+    ],
+    // Printed by the renderer under a published document, not compiled into it: the date is the
+    // publish date, which the compiled text cannot know.
+    'document' => [
+        'lastUpdated' => ['de' => 'Stand: {{ date }}', 'en' => 'Last updated: {{ date }}'],
+    ],
 ];

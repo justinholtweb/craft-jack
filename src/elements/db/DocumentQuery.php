@@ -6,9 +6,9 @@ use craft\elements\db\ElementQuery;
 use craft\helpers\Db;
 
 /**
- * @method \justinholtweb\jack\elements\Document[]|array all($db = null)
- * @method \justinholtweb\jack\elements\Document|array|null one($db = null)
- * @method \justinholtweb\jack\elements\Document|array|null nth(int $n, ?\yii\db\Connection $db = null)
+ * @template TKey of array-key
+ * @template TElement of \justinholtweb\jack\elements\Document
+ * @extends ElementQuery<TKey,TElement>
  */
 class DocumentQuery extends ElementQuery
 {
@@ -39,10 +39,6 @@ class DocumentQuery extends ElementQuery
 
     protected function beforePrepare(): bool
     {
-        if ($this->elementType === null) {
-            return parent::beforePrepare();
-        }
-
         $this->joinElementTable('jack_documents');
 
         // The per-site half is joined on the site the query is already resolving, so a document
@@ -62,6 +58,7 @@ class DocumentQuery extends ElementQuery
             'jack_documents.handle',
             'jack_documents.jurisdiction',
             'jack_documentsites.compiledHtml',
+            'jack_documentsites.publishedHtml',
             'jack_documentsites.compiledText',
             'jack_documentsites.stamp',
             'jack_documentsites.overrides',

@@ -1,5 +1,7 @@
 <?php
 
+$sells = ['when' => ['factTruthy' => ['site.sellsOnline']]];
+
 /**
  * Terms and conditions clauses, including the statutory withdrawal instructions.
  *
@@ -14,8 +16,6 @@
  *
  * @var array<int, array<string, mixed>>
  */
-
-$sells = ['when' => ['factTruthy' => ['site.sellsOnline']]];
 
 return [
     [
