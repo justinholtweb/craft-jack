@@ -1,7 +1,6 @@
 # Release Notes for Jack
 
-## Unreleased
-
+## 5.1.0 - 2026-10-09
 ### Added
 
 - **Consent manager configs** (Pro). The inventory written out as configuration for Toss (with the
