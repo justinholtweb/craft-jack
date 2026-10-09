@@ -109,7 +109,27 @@ Inside a rich-text field, a reference tag works:
 
 {{ craft.jack.lastUpdated('privacy')|date('long') }}
 {{ craft.jack.toc('privacy') }}
+
+{# Pro: the whole banner config, written from the inventory #}
+{{ craft.jack.consentScript('klaro') }}
 ```
+
+### Consent managers (Pro)
+
+The inventory is the list a consent banner needs, so Jack writes the banner's config from it: for
+[Toss](https://justinholt.com/plugins/craft-toss) (with which of your services Toss's script
+inventory is missing), Klaro, CookieConsent v3, and the Google Consent Mode types and Tape
+categories each service waits on. Download it from **Jack → Inventory → Export consent config**,
+print it with `php craft jack/inventory/consent-config --format=klaro`, or put it on the page with
+`craft.jack.consentScript()`. Services that run on legitimate interest are filed as necessary,
+because a banner offering to switch them off would be promising something the site doesn't do.
+
+### Headless
+
+Published documents are available over GraphQL (`jackDocuments`, `jackDocument`,
+`jackDocumentCount`, behind their own schema permission) and as JSON at `/jack/documents.json` and
+`/jack/documents/<handle>.json`, with their sections, version and clause stamp. Published text
+only: a draft never leaves the control panel, however it is asked for.
 
 ## Keeping documents true
 
@@ -169,8 +189,8 @@ itself a liability.
 **A consent banner.** Jack's job ends at describing accurately what the site does. Holding a script
 back until somebody agrees is a different job with a different failure mode, and a plugin that did
 both badly would be worse than two that each do one. What Jack does is make sure that if you have a
-banner, it and your privacy policy cannot disagree about which services exist — the inventory is
-readable from Twig for exactly that.
+banner, it and your privacy policy cannot disagree about which services exist: the inventory is
+readable from Twig, and on Pro Jack writes the banner's config itself.
 
 **A lawyer.** Jack produces drafts from facts you supply, using boilerplate that is conventional
 rather than bespoke. Somebody accountable should read one before it is published, and a business
@@ -189,6 +209,8 @@ with unusual processing needs advice, not a generator.
 | Finding undeclared services | | ● |
 | Version history and diffs | | ● |
 | Console commands and the CI check | | ● |
+| Consent manager config (Toss, Klaro, CookieConsent, Consent Mode / Tape) | | ● |
+| Published documents over GraphQL and JSON | ● | ● |
 
 Pro is $99, then $79 a year for updates. Publishing works in both editions.
 
@@ -205,6 +227,8 @@ because of a billing problem is a worse outcome than any it could prevent.
 | `showLastUpdated` | Print a “Stand:” / “Last updated:” line. |
 | `purifyOutput` | Restrict text *you* have rewritten to basic text markup. Off allows more HTML, but HTML Purifier still runs, so scripts and `javascript:` links never pass. Library text is never touched. |
 | `detectorPaths` | Directories the detector reads. Compiled JavaScript is worth including. |
+| `serveDocumentsJson` | Answer `/jack/documents.json` and `/jack/documents/<handle>.json` with published text. Default on. |
+| `consentCategories` | Pro. Move a service or inventory category to another consent category, or out of the banner (`config/jack.php` only). |
 
 ## Licence
 

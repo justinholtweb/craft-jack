@@ -14,6 +14,7 @@ only appears where `allowAdminChanges` is on. Every setting can also be set in `
 |---|---|---|---|
 | Recompile automatically | `autoCompile` | on | Rebuilds every document's draft when the profile, the inventory or these settings are saved. Off, drafts stay as they are and documents show as out of date instead |
 | Give documents their own URLs | `enableDocumentUrls` | on | Gives each document a front-end page. Turn it off if the site already publishes its legal texts through its own entries |
+| Serve documents as JSON | `serveDocumentsJson` | on | Answers `/jack/documents.json` and `/jack/documents/<handle>.json` with published text, for headless front ends. See [Headless](headless) |
 | Document template | `documentTemplate` | blank | Your template for a document's own page, rendered with a `document` variable. Blank means Jack's own plain page |
 | Show a “last updated” line | `showLastUpdated` | on | Prints *Stand:* or *Last updated:* with the publish date at the foot of every rendered document |
 | Restrict edited text to basic markup | `purifyOutput` | on | Limits text you've rewritten, and sections you've added, to basic text markup. Off allows more HTML; HTML Purifier runs either way, so scripts and `javascript:` links never pass. Library text is never touched |
@@ -52,8 +53,14 @@ return [
     'detectorPaths' => ['templates', 'web/dist'],
     'detectorExtensions' => ['twig', 'html', 'js'],
     'detectorMaxFileSize' => 512,
+    'serveDocumentsJson' => true,
+    // Pro: where the consent manager configs file services. See Consent managers.
+    'consentCategories' => ['maps' => 'marketing'],
 ];
 ```
+
+`consentCategories` has no field in the control panel. The defaults suit nearly every site; see
+[Consent managers](consent-managers#changing-where-a-service-goes).
 
 `detectorPaths` and `detectorExtensions` also accept a comma-separated string, such as
 `'twig,html,js'`.

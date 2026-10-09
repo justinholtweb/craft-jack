@@ -1,5 +1,24 @@
 # Release Notes for Jack
 
+## Unreleased
+
+### Added
+
+- **Consent manager configs** (Pro). The inventory written out as configuration for Toss (with the
+  matching Toss preset per service and, when Toss is the consent manager, which services its script
+  inventory is missing or files differently), Klaro, CookieConsent v3, and Google Consent Mode
+  types with the Tape category per service. Download one from **Inventory → Export consent config**,
+  print it with `jack/inventory/consent-config --format=…`, or put it on a page with
+  `craft.jack.consentScript()` and `craft.jack.consentConfig()`. Services run on legitimate
+  interest are filed as necessary; newsletters and cookie-free first-party entries stay out. The
+  `consentCategories` setting moves a service or a category.
+- **GraphQL for documents.** `jackDocuments`, `jackDocument` and `jackDocumentCount`, behind a new
+  **Query for published legal documents** schema permission: published text, sections, publish
+  date, version number, library date and clause stamp. Enabled, published documents only, for every
+  schema.
+- **A JSON endpoint**, `/jack/documents.json` and `/jack/documents/<handle>.json`, with the same
+  published-only rule. Switch it off with **Serve documents as JSON** (`serveDocumentsJson`).
+
 ## 5.0.0 - 2026-10-03
 
 Initial release.

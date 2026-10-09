@@ -85,4 +85,16 @@ class Edition
     {
         return $isPro;
     }
+
+    /**
+     * The inventory written out as a consent manager's config — Toss, Klaro, CookieConsent and
+     * Consent Mode/Tape.
+     *
+     * The inventory itself stays readable on Lite (`craft.jack.services()`, `cookies()`), so a
+     * banner can still be driven from it by hand; Pro writes the config for you.
+     */
+    public static function allowsConsentExport(bool $isPro): bool
+    {
+        return $isPro;
+    }
 }

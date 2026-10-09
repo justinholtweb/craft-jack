@@ -72,6 +72,27 @@ class Settings extends Model
      */
     public bool $enableDocumentUrls = true;
 
+    /**
+     * Serve published documents as JSON at `/jack/documents.json` and `/jack/documents/<handle>.json`,
+     * for front ends that do not render through Twig. Published text only, like every other way
+     * out of Jack.
+     */
+    public bool $serveDocumentsJson = true;
+
+    /**
+     * Where the consent manager configs file services (Pro). Keys are inventory categories
+     * (`maps`) or service keys (`google_maps`); values are one of the consent categories
+     * `necessary`, `preferences`, `analytics`, `marketing`, or null to leave it out of every
+     * banner. A service key wins over its category. Set in `config/jack.php`; there is no CP field,
+     * because the defaults are the answer for nearly every site.
+     *
+     * Untyped and normalised in {@see self::beforeValidate()}, for the same reason as
+     * {@see self::$detectorPaths}.
+     *
+     * @var array<string, string|null>|mixed
+     */
+    public $consentCategories = [];
+
     public function beforeValidate(): bool
     {
         $this->detectorPaths = $this->normalizeList($this->detectorPaths, 'path');
@@ -80,7 +101,31 @@ class Settings extends Model
             $this->normalizeList($this->detectorExtensions),
         );
 
+        $this->consentCategories = $this->normalizeMap($this->consentCategories);
+
         return parent::beforeValidate();
+    }
+
+    /**
+     * @return array<string, string|null>
+     */
+    private function normalizeMap(mixed $value): array
+    {
+        if (!is_array($value)) {
+            return [];
+        }
+
+        $map = [];
+
+        foreach ($value as $key => $category) {
+            if (!is_string($key) || trim($key) === '') {
+                continue;
+            }
+
+            $map[trim($key)] = is_string($category) && trim($category) !== '' ? trim($category) : null;
+        }
+
+        return $map;
     }
 
     /**
@@ -120,8 +165,8 @@ class Settings extends Model
     {
         return [
             [['documentTemplate'], 'string'],
-            [['autoCompile', 'showLastUpdated', 'purifyOutput', 'enableDocumentUrls'], 'boolean'],
-            [['detectorPaths', 'detectorExtensions'], 'safe'],
+            [['autoCompile', 'showLastUpdated', 'purifyOutput', 'enableDocumentUrls', 'serveDocumentsJson'], 'boolean'],
+            [['detectorPaths', 'detectorExtensions', 'consentCategories'], 'safe'],
             [['detectorMaxFileSize'], 'integer', 'min' => 1, 'max' => 10240],
         ];
     }

@@ -16,6 +16,13 @@ class DocumentQuery extends ElementQuery
     public mixed $handle = null;
     public mixed $jurisdiction = null;
 
+    /**
+     * True: only documents with published text on the site being queried. What the headless
+     * transports ask for, so a document that has only ever been compiled is not "found" with
+     * nothing in it.
+     */
+    public ?bool $published = null;
+
     public function documentType(mixed $value): self
     {
         $this->documentType = $value;
@@ -33,6 +40,13 @@ class DocumentQuery extends ElementQuery
     public function jurisdiction(mixed $value): self
     {
         $this->jurisdiction = $value;
+
+        return $this;
+    }
+
+    public function published(?bool $value = true): self
+    {
+        $this->published = $value;
 
         return $this;
     }
@@ -78,6 +92,17 @@ class DocumentQuery extends ElementQuery
 
         if ($this->jurisdiction) {
             $this->subQuery->andWhere(Db::parseParam('jack_documents.jurisdiction', $this->jurisdiction));
+        }
+
+        // A correlated EXISTS rather than a filter on the joined per-site table, which is joined
+        // into the outer query only (see above). `elements_sites` is in the subquery by the time
+        // the WHERE runs, which is all this needs.
+        if ($this->published !== null) {
+            $exists = sprintf(
+                'EXISTS (SELECT 1 FROM %s [[jds]] WHERE [[jds.documentId]] = [[elements.id]] AND [[jds.siteId]] = [[elements_sites.siteId]] AND [[jds.publishedHtml]] IS NOT NULL AND [[jds.publishedHtml]] <> \'\')',
+                '{{%jack_documentsites}}',
+            );
+            $this->subQuery->andWhere($this->published ? $exists : 'NOT ' . $exists);
         }
 
         // `ref` is what a `{jack:privacy:render}` tag arrives as. Each element type has to apply

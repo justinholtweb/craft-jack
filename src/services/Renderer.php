@@ -98,6 +98,57 @@ class Renderer extends Component
     }
 
     /**
+     * The published body alone, without the wrapper, contents list or "last updated" line — what
+     * a headless front end lays out itself. Empty for a disabled or never-published document.
+     */
+    public function body(Document $document): string
+    {
+        return $this->publishedHtml($document);
+    }
+
+    /**
+     * A published document as data, for the JSON endpoint.
+     *
+     * Only what a visitor of the rendered page could read: the published text and when and from
+     * which library it was published. The draft, its warnings and the missing facts stay inside
+     * the control panel. Null when there is nothing published to show.
+     *
+     * @return array<string, mixed>|null
+     */
+    public function payload(Document $document, bool $withBody = true): ?array
+    {
+        $body = $this->publishedHtml($document);
+
+        if ($body === '') {
+            return null;
+        }
+
+        $version = Plugin::getInstance()->documents->publishedVersion($document);
+        $stamp = $version ? \craft\helpers\Json::decodeIfJson((string)$version['record']->stamp) : [];
+
+        $payload = [
+            'handle' => $document->handle,
+            'type' => $document->documentType,
+            'typeLabel' => $document->typeLabel(),
+            'title' => $document->title,
+            'jurisdiction' => $document->jurisdiction,
+            'language' => $document->languageForSite(),
+            'url' => $document->getUrl(),
+            'publishedAt' => $document->publishedAt instanceof \DateTimeInterface ? $document->publishedAt->format(\DateTimeInterface::ATOM) : null,
+            'version' => $version['number'] ?? null,
+            'libraryVersion' => $version ? $version['record']->libraryVersion : null,
+        ];
+
+        if ($withBody) {
+            $payload['sections'] = $this->toc($document);
+            $payload['stamp'] = is_array($stamp) ? $stamp : [];
+            $payload['html'] = $body;
+        }
+
+        return $payload;
+    }
+
+    /**
      * The text visitors may see: the last published copy, and none at all for a disabled document.
      * A document an editor switched off because it was wrong must not stay in every footer that
      * renders it by handle.

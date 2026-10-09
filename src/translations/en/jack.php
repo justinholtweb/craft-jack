@@ -316,4 +316,10 @@ return [
     'Visitors only ever see a published version, so this document’s page is empty until somebody publishes it.' => 'Visitors only ever see a published version, so this document’s page is empty until somebody publishes it.',
     '“{title}” has never been published' => '“{title}” has never been published',
     '“{title}” has unpublished changes' => '“{title}” has unpublished changes',
+    'Google Consent Mode / Tape' => 'Google Consent Mode / Tape',
+    'Exporting a consent manager config is a Jack Pro feature.' => 'Exporting a consent manager config is a Jack Pro feature.',
+    'Query for published legal documents' => 'Query for published legal documents',
+    'Export consent config' => 'Export consent config',
+    'Serve documents as JSON' => 'Serve documents as JSON',
+    'Publish `/jack/documents.json` and `/jack/documents/<handle>.json` for front ends that don’t render through Twig. Published text only, the same as the documents’ own pages.' => 'Publish `/jack/documents.json` and `/jack/documents/<handle>.json` for front ends that don’t render through Twig. Published text only, the same as the documents’ own pages.',
 ];

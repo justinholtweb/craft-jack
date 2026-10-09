@@ -86,8 +86,17 @@ current imprint still links it, replace it.
 ### Is Jack a consent banner?
 
 No. Jack describes what the site does. It doesn't block scripts until a visitor agrees. If you have
-a banner, drive it from `craft.jack.consentRequired()` and `craft.jack.cookies()`, so the banner and
-the privacy policy can't disagree. See [Templating](templating#driving-a-consent-banner).
+a banner, drive it from the inventory, so the banner and the privacy policy can't disagree. On Pro,
+Jack writes the config for [Toss](/plugins/craft-toss), Klaro or CookieConsent v3, and the Consent
+Mode types for Tape. See [Consent managers](consent-managers). On Lite, use
+`craft.jack.consentRequired()` and `craft.jack.cookies()`; see
+[Templating](templating#driving-a-consent-banner).
+
+### Can a headless front end show the documents?
+
+Yes, in both editions. Published documents are available over GraphQL (`jackDocuments`, behind
+their own schema permission) and as JSON at `/jack/documents/<handle>.json`. Both show published
+text only, never a draft. See [Headless](headless).
 
 ### Can I change the wording?
 

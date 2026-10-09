@@ -98,7 +98,43 @@ expression evaluator.
 - `documents` — create, compile, publish, drift, versions, diff (LCS over lines).
 - `detector` — reads templates, plugins and env for undeclared services, **with evidence**.
 - `audit` — findings, worst first, each with a remedy.
-- `renderer` — puts stored text on a page. Never recompiles on the way out.
+- `renderer` — puts stored text on a page. Never recompiles on the way out. `body()` and
+  `payload()` are the same published text for GraphQL and the JSON endpoint.
+- `consentExport` — the inventory as a consent manager's config (Pro): `toss`, `klaro`,
+  `cookieconsent`, `consent-mode`. Pure like the compiler (no dates, no visitor). See below.
+
+### Consent manager configs (theme 3 consumer of Toss's contract)
+
+Jack is still not a banner; it writes the banner's config from the inventory. Every target files
+each service under Toss's canonical categories (`necessary`, `preferences`, `analytics`,
+`marketing`): a `consentCategories` key naming the service wins, then **non-consent legal basis →
+`necessary`**, then the inventory category via `ConsentExport::DEFAULT_CATEGORY_MAP` (`email` →
+null = left out; cookie-free first-party entries are left out too).
+
+- Toss is read through the plugins service only after `isPluginEnabled('toss')`, never by class
+  name, so Jack has no dependency on it (`tossConsent()` is untyped on purpose). "Active" = Toss's
+  `consent->isActive()`, the contract's test. When active: `inToss`/`tossCategory` per service from
+  `consent->scripts($siteId)`, Toss's extra categories are allowed, and `consentModeMap()` (with
+  `config/toss.php` overrides) replaces Jack's copy of the map.
+- `TOSS_PRESETS` maps Jack keys to Toss preset keys (`meta_pixel` → `meta-pixel`). Update it when
+  either registry gains a service.
+- Wildcard cookie names become `helpers\CookiePattern`: a regex-source string in JSON, a real regex
+  literal in `script()`. Only names matching `[A-Za-z0-9_.\-*]` become patterns, so no `/` can end
+  the literal early. `script()` encodes with `JSON_HEX_TAG|AMP|APOS|QUOT`: custom service labels are
+  editor-typed.
+- Banner wording lives in `src/library/consent.php` (all prose lives under `src/library`).
+
+### Headless delivery
+
+GraphQL (`jackDocuments`/`jackDocument`/`jackDocumentCount`, scope `jackDocuments.all`) and
+`/jack/documents[.json|/<handle>.json]` (`controllers\JsonController`, anonymous, CORS `*`,
+`serveDocumentsJson`). Both are **published text of enabled documents only**:
+`DocumentResolver` forces `status(enabled)->trashed(false)->published()` after applying arguments,
+whatever the schema's inactive-elements scope says; `DocumentQuery::published()` is a correlated
+`EXISTS` on `jack_documentsites` (not a filter on the outer-only join). No type exposes
+`compiledHtml`, warnings, missing facts or overrides. `version`/`stamp` come from the latest
+`jack_versions` row (`Documents::publishedVersion()`), not the per-site stamp, which describes the
+last *compile*.
 
 ## Rules the code does not break
 
@@ -167,6 +203,16 @@ expression evaluator.
 - **`actions/jack/documents/render` must not answer on its own.** It is anonymous, so it only
   renders when the URL manager matched that very document; otherwise it was a second, indexable
   copy that ignored `enableDocumentUrls`.
+- **Craft offers `status`/`trashed`/`archived` GraphQL arguments only to a schema that may query
+  inactive elements**, and silently drops a nested field a type lacks (`{ jackDocument { compiledHtml } }`
+  answers `{}` with no error). Tests assert on absent keys, and test the resolver's overrides with
+  an inactive-elements schema in its own process.
+- **CP HTTP checks log in with an impersonation token**, not the login form: another builder's
+  security plugin (Garrison) locks 127.0.0.1 out of `users/login` for minutes at a time, and the
+  harness admin's password stops validating. `consent-export.php` creates throwaway users and an
+  `users/impersonate-with-token` token, sent to the **site** URL (the CP bounces an anonymous
+  request to its login screen before the token route runs) **with a User-Agent** — PHP's curl sends
+  none, and Craft then refuses to log anybody in (`requireUserAgentAndIpForSession`).
 - **The harness is shared.** Another session writing project config makes `switchEdition()` throw
   `StaleResourceException` even after `ProjectConfig::reset()`: the config version lives on the
   cached info row, so `Craft::$app->getIsInstalled(true)` first, then reset, then retry. A run that
@@ -195,6 +241,8 @@ No local PHP on this Mac. Everything runs inside the plugin-testing container:
 ```sh
 cd ~/Sites/plugin-testing
 ddev exec php /var/www/craft-jack/tests/integration/checks.php     # 188 checks
+ddev exec php /var/www/craft-jack/tests/integration/consent-export.php  # consent configs + CP download security
+ddev exec php /var/www/craft-jack/tests/integration/headless.php   # GraphQL (3 processes) + JSON endpoint
 ddev exec bash /var/www/craft-jack/tests/integration/cp-smoke.sh   # every CP screen + front end
 ddev exec bash -c 'find /var/www/craft-jack/src -name "*.php" -print0 | xargs -0 -n1 php -l'
 
@@ -217,7 +265,7 @@ control flow would.
 
 ## Coding conventions
 
-- `Craft::t('jack', '…')` for user-facing strings; `src/translations/en/jack.php` lists all 303
+- `Craft::t('jack', '…')` for user-facing strings; `src/translations/en/jack.php` lists all of them
 - **All prose lives under `src/library`** — clauses, processor descriptions and the sentence
   templates the compiler assembles. Legal wording in a PHP service is wording nobody who is not a
   developer can review.

@@ -24,6 +24,15 @@
     errors: settings.getErrors('enableDocumentUrls'),
 }) }}
 
+{{ forms.lightswitchField({
+    label: 'Serve documents as JSON'|t('jack'),
+    instructions: 'Publish `/jack/documents.json` and `/jack/documents/<handle>.json` for front ends that don’t render through Twig. Published text only, the same as the documents’ own pages.'|t('jack'),
+    id: 'serveDocumentsJson',
+    name: 'serveDocumentsJson',
+    on: settings.serveDocumentsJson,
+    errors: settings.getErrors('serveDocumentsJson'),
+}) }}
+
 {{ forms.autosuggestField({
     label: 'Document template'|t('jack'),
     instructions: 'Rendered with a `document` variable. Left empty, Jack renders a plain readable page of its own — which is a working answer, not a placeholder.'|t('jack'),

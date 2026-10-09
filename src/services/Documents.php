@@ -34,6 +34,14 @@ class Documents extends Component
     public const EVENT_AFTER_PUBLISH = 'afterPublish';
 
     /**
+     * {@see self::publishedVersion()} per document and site, for one request: a GraphQL query
+     * asks for the number, the library date and the stamp separately.
+     *
+     * @var array<string, array{number: int, record: VersionRecord}|null>
+     */
+    private array $publishedVersions = [];
+
+    /**
      * Compiles a document for one site and stores the result.
      *
      * The compiled text is stored, not rendered on the fly. A legal document has to keep saying
@@ -217,6 +225,8 @@ class Documents extends Component
             }
         }
 
+        $this->publishedVersions = [];
+
         $record = new VersionRecord([
             'documentId' => $document->id,
             'siteId' => $document->siteId,
@@ -259,6 +269,40 @@ class Documents extends Component
             ->all();
 
         return $versions;
+    }
+
+    /**
+     * The version a document is currently showing on its site, and its number (1 for the first
+     * publish). Null when it has never been published there.
+     *
+     * The latest version row, not the per-site stamp: the stamp on the document describes the
+     * last *compile*, which may be a draft nobody has published.
+     *
+     * @return array{number: int, record: VersionRecord}|null
+     */
+    public function publishedVersion(Document $document): ?array
+    {
+        if (!$document->id || !$document->siteId) {
+            return null;
+        }
+
+        $key = $document->id . ':' . $document->siteId;
+
+        if (array_key_exists($key, $this->publishedVersions)) {
+            return $this->publishedVersions[$key];
+        }
+
+        $latest = $this->versions($document->id, $document->siteId, 1)[0] ?? null;
+
+        if (!$latest) {
+            return $this->publishedVersions[$key] = null;
+        }
+
+        $number = (int)VersionRecord::find()
+            ->where(['documentId' => $document->id, 'siteId' => $document->siteId])
+            ->count();
+
+        return $this->publishedVersions[$key] = ['number' => $number, 'record' => $latest];
     }
 
     public function version(int $id): ?VersionRecord

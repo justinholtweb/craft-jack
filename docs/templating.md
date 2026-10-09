@@ -87,6 +87,8 @@ printed and quoted, and every class Jack invents is one your theme has to overri
 | `craft.jack.consentRequired()` | Services whose legal basis is consent |
 | `craft.jack.cookies(language)` | Every cookie the inventory declares |
 | `craft.jack.libraryVersion()` | The date the bundled clause library was last reviewed |
+| `craft.jack.consentConfig(format, siteId)` | Pro. The inventory as a consent manager's config: `toss`, `klaro`, `cookieconsent` or `consent-mode`. See [Consent managers](consent-managers) |
+| `craft.jack.consentScript(format, options, siteId)` | Pro. The same config in a `<script>` that assigns it to a global |
 
 `siteId` is optional everywhere and defaults to the current site.
 
@@ -169,6 +171,9 @@ in the current site's language unless you pass one.
 
 Unlike documents, the inventory is live: `services()`, `consentRequired()` and `cookies()` reflect
 the inventory as it is now, not as of the last publish.
+
+On Pro, Jack can write the whole config for Toss, Klaro or CookieConsent v3, and the Consent Mode
+types for Tape, so you don't have to. See [Consent managers](consent-managers).
 
 ## Reference tags
 

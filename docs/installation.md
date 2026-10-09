@@ -78,6 +78,7 @@ registry. Pro adds everything that keeps them true over time and across sites.
 | Publishing a document | ✅ | ✅ |
 | Told when a document is out of date | ✅ | ✅ |
 | Twig API, reference tags and the **Legal document** field | ✅ | ✅ |
+| Published documents over GraphQL and as JSON | ✅ | ✅ |
 | Cookie policy, terms and conditions, withdrawal instructions, disclaimer, accessibility statement, social media privacy | — | ✅ |
 | Every site and language, with per-site profile overrides | — | ✅ |
 | Rewriting a section, leaving one out, adding your own | — | ✅ |
@@ -85,6 +86,7 @@ registry. Pro adds everything that keeps them true over time and across sites.
 | **Find undeclared services** | — | ✅ |
 | Version history and comparing versions | — | ✅ |
 | Console commands and the CI check | — | ✅ |
+| Consent manager config for Toss, Klaro, CookieConsent and Consent Mode / Tape | — | ✅ |
 
 On Lite, documents are compiled for the primary site only, in that site's language.
 

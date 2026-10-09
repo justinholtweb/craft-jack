@@ -4,6 +4,7 @@ namespace justinholtweb\jack\twig;
 
 use Craft;
 use justinholtweb\jack\elements\Document;
+use justinholtweb\jack\models\Edition;
 use justinholtweb\jack\models\ServiceEntry;
 use justinholtweb\jack\Plugin;
 use Twig\Markup;
@@ -130,6 +131,49 @@ class JackVariable
         return Plugin::getInstance()->inventory->cookies(
             $language ?? strtolower(Craft::$app->getSites()->getCurrentSite()->language),
         );
+    }
+
+    /**
+     * The inventory as a consent manager's config (Pro): `toss`, `klaro`, `cookieconsent` or
+     * `consent-mode`. An empty array on Lite.
+     *
+     * Wildcard cookie names come back as pattern objects; use {@see self::consentScript()} to put
+     * the config on a page, or `|json_encode` for their pattern source as a string.
+     *
+     * @return array<string, mixed>
+     */
+    public function consentConfig(string $format, ?int $siteId = null): array
+    {
+        $plugin = Plugin::getInstance();
+
+        if (!Edition::allowsConsentExport($plugin->isPro())) {
+            Craft::warning('craft.jack.consentConfig() is a Jack Pro feature.', Plugin::LOG_CATEGORY);
+
+            return [];
+        }
+
+        return $plugin->consentExport->build($format, $siteId);
+    }
+
+    /**
+     * A `<script>` assigning the consent manager config to a global (Pro) — `klaroConfig` for
+     * Klaro, `jackConsentConfig` otherwise, or `options.variable`. Nothing on Lite.
+     *
+     * The same for every visitor, so it is safe in a statically cached page.
+     *
+     * @param array{variable?: string} $options
+     */
+    public function consentScript(string $format, array $options = [], ?int $siteId = null): Markup
+    {
+        $plugin = Plugin::getInstance();
+
+        if (!Edition::allowsConsentExport($plugin->isPro())) {
+            Craft::warning('craft.jack.consentScript() is a Jack Pro feature.', Plugin::LOG_CATEGORY);
+
+            return \craft\helpers\Template::raw('');
+        }
+
+        return $plugin->consentExport->script($format, $siteId, $options['variable'] ?? null);
     }
 
     /** The date the bundled clause library was last reviewed. */

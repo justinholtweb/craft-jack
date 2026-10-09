@@ -6,18 +6,25 @@ use Craft;
 use craft\base\Model;
 use craft\base\Plugin as BasePlugin;
 use craft\events\RegisterComponentTypesEvent;
+use craft\events\RegisterGqlQueriesEvent;
+use craft\events\RegisterGqlSchemaComponentsEvent;
+use craft\events\RegisterGqlTypesEvent;
 use craft\events\RegisterUrlRulesEvent;
 use craft\events\RegisterUserPermissionsEvent;
 use craft\services\Elements;
 use craft\services\Fields;
+use craft\services\Gql;
 use craft\services\UserPermissions;
 use craft\web\twig\variables\CraftVariable;
 use craft\web\UrlManager;
 use justinholtweb\jack\elements\Document;
 use justinholtweb\jack\fields\DocumentField;
+use justinholtweb\jack\gql\DocumentQueries;
+use justinholtweb\jack\gql\interfaces\DocumentInterface;
 use justinholtweb\jack\models\Settings;
 use justinholtweb\jack\services\Audit;
 use justinholtweb\jack\services\Compiler;
+use justinholtweb\jack\services\ConsentExport;
 use justinholtweb\jack\services\Detector;
 use justinholtweb\jack\services\Documents;
 use justinholtweb\jack\services\Inventory;
@@ -46,7 +53,9 @@ use yii\base\Event;
  *
  * What it deliberately is not: a consent banner. Jack's job ends at describing accurately what
  * the site does. Holding a script back until somebody agrees is a different job with a different
- * failure mode, and a plugin that did both badly would be worse than two that each do one.
+ * failure mode, and a plugin that did both badly would be worse than two that each do one. What
+ * Jack does do is write the banner's config from the same inventory ({@see ConsentExport}), so
+ * the banner and the policy cannot disagree.
  *
  * @property-read Library $library
  * @property-read Profiles $profiles
@@ -56,6 +65,7 @@ use yii\base\Event;
  * @property-read Detector $detector
  * @property-read Audit $audit
  * @property-read Renderer $renderer
+ * @property-read ConsentExport $consentExport
  * @property-read Settings $settings
  *
  * @method Settings getSettings()
@@ -98,6 +108,7 @@ class Plugin extends BasePlugin
                 'detector' => Detector::class,
                 'audit' => Audit::class,
                 'renderer' => Renderer::class,
+                'consentExport' => ConsentExport::class,
             ],
         ];
     }
@@ -109,6 +120,8 @@ class Plugin extends BasePlugin
         $this->registerElementTypes();
         $this->registerFieldTypes();
         $this->registerCpRoutes();
+        $this->registerSiteRoutes();
+        $this->registerGraphQl();
         $this->registerPermissions();
         $this->registerTwig();
     }
@@ -224,8 +237,46 @@ class Plugin extends BasePlugin
                 'jack/profile/<siteHandle:{handle}>' => 'jack/profile/edit',
                 'jack/inventory' => 'jack/inventory/index',
                 'jack/inventory/detect' => 'jack/inventory/detect',
+                'jack/inventory/consent-config' => 'jack/inventory/consent-config',
                 'jack/inventory/<serviceKey:[a-z0-9_]+>' => 'jack/inventory/edit',
                 'jack/audit' => 'jack/audit/index',
+            ];
+        });
+    }
+
+    /**
+     * Published documents as JSON, for front ends that do not render through Twig. Switched off
+     * by `serveDocumentsJson`, which the controller checks.
+     */
+    private function registerSiteRoutes(): void
+    {
+        Event::on(UrlManager::class, UrlManager::EVENT_REGISTER_SITE_URL_RULES, function(RegisterUrlRulesEvent $event) {
+            $event->rules['jack/documents.json'] = 'jack/json/index';
+            $event->rules['jack/documents/<handle:[a-z0-9\-_]+>.json'] = 'jack/json/view';
+        });
+    }
+
+    /**
+     * `jackDocuments` / `jackDocument` / `jackDocumentCount`, behind one schema component.
+     *
+     * Published text only, for every schema. There is no permission that reaches a draft, so no
+     * token can be given one by mistake.
+     */
+    private function registerGraphQl(): void
+    {
+        Event::on(Gql::class, Gql::EVENT_REGISTER_GQL_TYPES, function(RegisterGqlTypesEvent $event) {
+            $event->types[] = DocumentInterface::class;
+        });
+
+        Event::on(Gql::class, Gql::EVENT_REGISTER_GQL_QUERIES, function(RegisterGqlQueriesEvent $event) {
+            $event->queries = array_merge($event->queries, DocumentQueries::getQueries());
+        });
+
+        Event::on(Gql::class, Gql::EVENT_REGISTER_GQL_SCHEMA_COMPONENTS, function(RegisterGqlSchemaComponentsEvent $event) {
+            $event->queries[Craft::t('jack', 'Jack')] = [
+                DocumentQueries::SCOPE . ':read' => [
+                    'label' => Craft::t('jack', 'Query for published legal documents'),
+                ],
             ];
         });
     }

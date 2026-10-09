@@ -147,6 +147,32 @@ class Document extends Element
         return new DocumentQuery(static::class);
     }
 
+    // -----------------------------------------------------------------------------------------
+    // GraphQL
+    // -----------------------------------------------------------------------------------------
+
+    /** One type for every document: documents have no field layout to vary by. */
+    public static function gqlTypeName(): string
+    {
+        return 'JackDocument';
+    }
+
+    public static function baseGqlType(): \GraphQL\Type\Definition\Type
+    {
+        return \justinholtweb\jack\gql\interfaces\DocumentInterface::getType();
+    }
+
+    /** The one schema component documents need: `jackDocuments.all`. */
+    public static function gqlScopesByContext(mixed $context): array
+    {
+        return [\justinholtweb\jack\gql\DocumentQueries::SCOPE];
+    }
+
+    public function getGqlTypeName(): string
+    {
+        return static::gqlTypeName();
+    }
+
     public static function typeLabels(): array
     {
         return [

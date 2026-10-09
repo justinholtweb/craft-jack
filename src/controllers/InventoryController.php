@@ -8,6 +8,7 @@ use justinholtweb\jack\models\Edition;
 use justinholtweb\jack\models\ServiceEntry;
 use justinholtweb\jack\Plugin;
 use justinholtweb\jack\services\Compiler;
+use justinholtweb\jack\services\ConsentExport;
 use yii\web\ForbiddenHttpException;
 use yii\web\NotFoundHttpException;
 use yii\web\Response;
@@ -38,8 +39,58 @@ class InventoryController extends Controller
             'available' => $plugin->inventory->available(),
             'categories' => \justinholtweb\jack\services\Inventory::categories(),
             'canDetect' => Edition::allowsDetection($plugin->isPro()),
+            'canExportConsent' => Edition::allowsConsentExport($plugin->isPro()),
+            'consentFormats' => [
+                ConsentExport::FORMAT_TOSS => 'Toss',
+                ConsentExport::FORMAT_KLARO => 'Klaro',
+                ConsentExport::FORMAT_COOKIECONSENT => 'CookieConsent v3',
+                ConsentExport::FORMAT_CONSENT_MODE => Craft::t('jack', 'Google Consent Mode / Tape'),
+            ],
             'canManage' => Craft::$app->getUser()->checkPermission(Plugin::PERMISSION_MANAGE),
         ]);
+    }
+
+    /**
+     * The inventory as a consent manager's config, downloaded as JSON (Pro).
+     *
+     * A read, so a plain GET behind the view permission: it says what the published banner will
+     * say anyway. On a multi-site install the site is checked against Craft's own site permission,
+     * like every other per-site screen.
+     *
+     * @throws ForbiddenHttpException
+     * @throws NotFoundHttpException
+     */
+    public function actionConsentConfig(): Response
+    {
+        $plugin = Plugin::getInstance();
+
+        if (!Edition::allowsConsentExport($plugin->isPro())) {
+            throw new ForbiddenHttpException(Craft::t('jack', 'Exporting a consent manager config is a Jack Pro feature.'));
+        }
+
+        $format = (string)$this->request->getQueryParam('format', ConsentExport::FORMAT_TOSS);
+
+        if (!in_array($format, ConsentExport::FORMATS, true)) {
+            throw new NotFoundHttpException('Unknown format');
+        }
+
+        $sites = Craft::$app->getSites();
+        $handle = $this->request->getQueryParam('site');
+        $site = is_string($handle) && $handle !== '' ? $sites->getSiteByHandle($handle) : $sites->getCurrentSite();
+
+        if (!$site) {
+            throw new NotFoundHttpException('Site not found');
+        }
+
+        if ($sites->getTotalSites() > 1) {
+            $this->requirePermission('editSite:' . $site->uid);
+        }
+
+        return $this->response->sendContentAsFile(
+            $plugin->consentExport->json($format, $site->id),
+            sprintf('jack-%s-%s.json', $format, $site->handle),
+            ['mimeType' => 'application/json'],
+        );
     }
 
     /**

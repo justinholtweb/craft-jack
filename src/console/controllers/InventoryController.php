@@ -2,10 +2,12 @@
 
 namespace justinholtweb\jack\console\controllers;
 
+use Craft;
 use craft\console\Controller;
 use craft\helpers\Console;
 use justinholtweb\jack\models\Edition;
 use justinholtweb\jack\Plugin;
+use justinholtweb\jack\services\ConsentExport;
 use yii\console\Exception;
 use yii\console\ExitCode;
 
@@ -17,9 +19,19 @@ class InventoryController extends Controller
     /** Add everything found that is not already declared. */
     public bool $adopt = false;
 
+    /** `toss`, `klaro`, `cookieconsent` or `consent-mode`. */
+    public string $format = ConsentExport::FORMAT_TOSS;
+
+    /** The site handle to write the config for. Defaults to the primary site. */
+    public ?string $site = null;
+
     public function options($actionID): array
     {
-        return array_merge(parent::options($actionID), $actionID === 'detect' ? ['adopt'] : []);
+        return array_merge(parent::options($actionID), match ($actionID) {
+            'detect' => ['adopt'],
+            'consent-config' => ['format', 'site'],
+            default => [],
+        });
     }
 
     public function beforeAction($action): bool
@@ -109,6 +121,35 @@ class InventoryController extends Controller
                 $entry->enabled ? 'on' : 'off',
             ));
         }
+
+        return ExitCode::OK;
+    }
+
+    /**
+     * Prints the inventory as a consent manager's config, as JSON — redirect it into a file to
+     * commit next to the banner.
+     *
+     * php craft jack/inventory/consent-config --format=klaro --site=default > web/klaro-config.json
+     */
+    public function actionConsentConfig(): int
+    {
+        if (!in_array($this->format, ConsentExport::FORMATS, true)) {
+            $this->stderr(sprintf("Unknown format “%s”. Use one of: %s.\n", $this->format, implode(', ', ConsentExport::FORMATS)), Console::FG_RED);
+
+            return ExitCode::USAGE;
+        }
+
+        $sites = Craft::$app->getSites();
+        $site = $this->site !== null ? $sites->getSiteByHandle($this->site) : $sites->getPrimarySite();
+
+        if (!$site) {
+            $this->stderr("No site with the handle “{$this->site}”.\n", Console::FG_RED);
+
+            return ExitCode::USAGE;
+        }
+
+        // No separate edition check: every console command is Pro already (see beforeAction()).
+        $this->stdout(Plugin::getInstance()->consentExport->json($this->format, $site->id));
 
         return ExitCode::OK;
     }

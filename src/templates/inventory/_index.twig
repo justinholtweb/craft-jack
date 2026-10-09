@@ -5,6 +5,19 @@
 {% set selectedSubnavItem = 'inventory' %}
 
 {% block actionButton %}
+    {% if canExportConsent %}
+        {% set exportItems = [] %}
+        {% for format, label in consentFormats %}
+            {% set exportItems = exportItems|merge([{
+                label: label,
+                url: url('jack/inventory/consent-config', { format: format, site: currentSite.handle }),
+            }]) %}
+        {% endfor %}
+        {{ disclosureMenu(exportItems, {
+            buttonLabel: 'Export consent config'|t('jack'),
+            buttonAttributes: { class: ['btn'] },
+        }) }}
+    {% endif %}
     {% if canDetect %}
         <a href="{{ url('jack/inventory/detect') }}" class="btn">{{ 'Find undeclared services'|t('jack') }}</a>
     {% endif %}
